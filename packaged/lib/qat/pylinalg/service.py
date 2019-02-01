@@ -17,17 +17,18 @@ import qat.comm.qpu.ttypes as qpu_types
 import qat.comm.qproc.ttypes as simu_types
 import qat.core.qproc as qproc
 #from bitstring import BitArray as OrigBitArray
-from qat.core.simutil import rev_bits
-#from .stochastic_util import replace_noises
+#from qat.core.simutil import rev_bits
 
-CURRENT_EXECUTION_KEY = None
-RHO_DIAG = None
-ERR_RHO_DIAG = None
-MEASURE_WORKER = None
-HISTORY = []
-CBITS = None
-STOPPED_BECAUSE_FULL_BUFFER = None
-_EXEC_COUNT = 0 #number of executions of circuit evolution
+from qat.pylinalg import simulator as np_engine
+
+#CURRENT_EXECUTION_KEY = None
+#RHO_DIAG = None
+#ERR_RHO_DIAG = None
+#MEASURE_WORKER = None
+#HISTORY = []
+#CBITS = None
+#STOPPED_BECAUSE_FULL_BUFFER = None
+#_EXEC_COUNT = 0 #number of executions of circuit evolution
 
 
 class PyLinalg(qproc.Plugin):
@@ -54,32 +55,41 @@ class PyLinalg(qproc.Plugin):
             Execute the simulation
 
         Args:
-            simu_input (`Circuit <datamodel.html#Struct_Circuit>`_.): simulation input information
+            simu_input (`Circuit <datamodel.html#Struct_Circuit>`_.): 
+                                                simulation input information
         """
+
         logging.info("New simulation")
 
-        if simu_input.options.mode == simu_types.Mode.DEFAULT:
-            logging.info("Mode DEFAULT")
-        elif simu_input.options.mode == simu_types.Mode.ANALYZE:
-            logging.info("Mode ANALYZE")
-        else:
-            raise task_types.InvalidArgumentException(0,
-                                                      "qat.pylinalg",
-                                                      "Unknown execution mode %s"
-                                                      % simu_input.options.mode)
-
-        ret_val = simu_types.StateVector()
+        state_vector = simu_types.StateVector()
 
         if simu_input.options.mode == simu_types.Mode.ANALYZE:
             logging.info("Analyze mode")
 
+            print("sucessfully called submit in analyze mode")
+
             # Implementation goes here.
 
         elif simu_input.options.mode == simu_types.Mode.DEFAULT:
-            # Sample states for a given density matrix
             logging.info("Default mode")
 
+            state_vec = np_engine.output_state_vector(simu_input.task.circuit)
+        
+            print("final state ")
+            print(state_vec)
+
             print("sucessfully called submit in default mode")
+
+            state_vector.states = []
+
+            tmp_state = 0
+            bytes_state = tmp_state.to_bytes((tmp_state.bit_length() // 8) + 1,
+                                                byteorder="little")    
+ 
+            result = qpu_types.Result(bytes_state, probability=1.)
+       
+            for _ in range(simu_input.options.run_nb): 
+                state_vector.states.append(result)
 
             # Implementation goes here.
 
@@ -89,5 +99,5 @@ class PyLinalg(qproc.Plugin):
 
         logging.info("End of simulation")
 
-        return ret_val
+        return state_vector
 

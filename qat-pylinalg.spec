@@ -79,7 +79,9 @@ Provides:       %{name}
 #Conflicts:
 
 # Product dependencies
-#Requires:       backtrace
+Requires:       backtrace
+Requires:       qat-core >= 0.0.8
+
 #Requires:       net-snmp
 #Requires:       python-cffi >= 0.8.6
 

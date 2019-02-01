@@ -32,10 +32,8 @@ def get_qproc_handler_list():
     
     return [PyLinalg]
 
-           Please contact Bull SAS for details about its license.
-
 def get_qpu_server(*args, **kwargs):
-"""
+    """
     Return a default qpu for noisy qproc
 
     Returns:
@@ -52,5 +50,3 @@ def get_qpu_server(*args, **kwargs):
 
     client = PyLinalg(*args, **kwargs)
     return qpu.Server(client, qpu_handlers)
-
-"""

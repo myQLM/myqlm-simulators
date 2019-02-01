@@ -1,10 +1,11 @@
+
 ###############################################################################
 #
-# Skeleton product packaging
+# qat-pylinalg product packaging
 #
 ###############################################################################
 
-%define name skeleton
+%define name qat-pylinalg
 
 %define version 0.0.1
 
@@ -40,13 +41,18 @@ Prefix: /usr
 %define target_conf_dir /etc/
 %define target_bin_dir /usr/bin
 %define target_lib_dir /usr/lib*
-%define target_python_lib_dir %{python2_sitearch}
+%define target_include_dir /usr/include
+%define target_prefix  /usr/
+%define target_data_dir  %{target_prefix}/share/
+%define target_python_lib_dir %{python_sitearch}
 %define target_man_dir %{_mandir}
+%define target_share_dir /usr/share/%{name}
 %define target_doc_dir /usr/share/doc/%{name}
+%define target_notebook_dir /usr/share/doc/qat
 
 
 # Package summary
-Summary:        New product skeleton
+Summary:        New product qat-pylinalg
 Name:           %{name}
 Version:        %{version}
 Release:        %{release}
@@ -73,9 +79,9 @@ Provides:       %{name}
 #Conflicts:
 
 # Product dependencies
-Requires:       backtrace
-Requires:       net-snmp
-Requires:       python-cffi >= 0.8.6
+#Requires:       backtrace
+#Requires:       net-snmp
+#Requires:       python-cffi >= 0.8.6
 
 # Packaging dependencies
 BuildRequires:  autoconf
@@ -90,30 +96,30 @@ BuildRequires:  doxygen
 
 # Main package description
 %description
-Skeleton description
+qat-pylinalg description
 
 # Documenatation sub-package
 %package doc
-Summary: Documentation of the skeleton package
+Summary: Documentation of the qat-pylinalg package
 
 %description doc
-Doxygen documentation of skeleton package
+Doxygen documentation of qat-pylinalg package
 
 # Devel sub-package
 %package devel
-Summary: Header files providing the skeleton API
+Summary: Header files providing the qat-pylinalg API
 Requires: %{name}
 
 %description devel
-Header files providing the skeleton API
+Header files providing the qat-pylinalg API
 
 # Tests sub-package
 %package tests
 Requires: %{name}
-Summary: Tests for the skeleton library
+Summary: Tests for the qat-pylinalg library
 
 %description tests
-Test for the skeleton library
+Test for the qat-pylinalg library
 
 
 ###############################################################################
@@ -169,8 +175,10 @@ test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(-,root,root)
 #%{_libdir}/lib*
-%{target_lib_dir}/lib*
+#%{target_bin_dir}/*
+
 %{target_python_lib_dir}/*
+
 
 # Changelog is automatically generated (see Makefile)
 # The %doc macro already contain a default path (usually /usr/doc/)
@@ -182,21 +190,11 @@ test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
 %doc
        %{target_doc_dir}/ChangeLog
 
-# Devel sub-package files
-%files devel
-       %{_includedir}/skeleton/*.h
 
 # Documentation sub-package files
 %files doc
        %{target_doc_dir}/%{version}/
 
-# Tests sub-package files
-%files tests
-       %{target_doc_dir}/tests/
-
-# Tools sub-package files
-%files tools
-       %{target_bin_dir}/*
 
 
 ##################################################

@@ -1,0 +1,4 @@
+[pep8]
+ignore = E126,E127,E128,E501
+# ignore line length: done by pylint
+max-line-length = 90

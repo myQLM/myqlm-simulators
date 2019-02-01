@@ -1,0 +1,6 @@
+
+INPUT += @top_srcdir@/packaged/include \
+         @top_srcdir@/packaged/lib \
+         @abs_top_builddir@/packaged/include
+
+EXAMPLE_PATH           +=  @top_srcdir@/packaged/doc/examples/

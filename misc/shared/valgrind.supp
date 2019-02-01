@@ -1,0 +1,52 @@
+{
+   <CUNIT_with_fork1>
+   Memcheck:Leak
+   fun:malloc
+   fun:CU_create_new_registry
+   fun:CU_initialize_registry
+   fun:main
+}
+{
+   <CUNIT_with_fork2>
+   Memcheck:Leak
+   fun:malloc
+   fun:CU_add_suite
+   fun:main
+}
+{
+   <CUNIT_with_fork3>
+   Memcheck:Leak
+   fun:malloc
+   fun:__fopen_internal
+   fun:CU_automated_run_tests
+   fun:main
+}
+{
+   <CUNIT_addtest>
+   Memcheck:Leak
+   ...
+   fun:CU_add_test
+   ...
+}
+{
+   <CUNIT_ASSERT>
+   Memcheck:Leak
+   ...
+   fun:CU_assertImplementation
+   ...
+}
+{
+   <socketcall_sendto>
+   Memcheck:Param
+   socketcall.sendto(msg)
+   fun:send
+   ...
+}
+{
+   <socketcall_sendto>
+   Memcheck:Param
+   socketcall.send(msg)
+   fun:send
+   ...
+}
+

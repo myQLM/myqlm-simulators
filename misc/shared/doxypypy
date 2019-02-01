@@ -1,0 +1,6 @@
+#!/bin/bash
+
+script_name=$(readlink -f "${BASH_SOURCE}")
+script_dir=$(dirname "${script_name}")
+
+python $script_dir/doxypypy.py -Nn packaged.lib. -s $@

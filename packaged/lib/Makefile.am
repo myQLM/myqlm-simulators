@@ -34,7 +34,11 @@ nodist_qatpylinalg_PYTHON=		  $(srcdir)/qat/pylinalg/__init__.py
 # For installation
 nobase_nodist_python_PYTHON=		  qat/pylinalg/version.py
 
-#nobase_python_PYTHON=#		  qat/pylinalg/...
+nobase_python_PYTHON=\
+						qat/pylinalg/service.py\
+						qat/pylinalg/simulator.py\
+						qat/pylinalg/simulator.so\
+						qat/pylinalg/qpu.py
 
 
 

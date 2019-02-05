@@ -22,9 +22,6 @@ import qat.core.qproc as qproc
 from qat.pylinalg import simulator as np_engine
 
 #CURRENT_EXECUTION_KEY = None
-#RHO_DIAG = None
-#ERR_RHO_DIAG = None
-#MEASURE_WORKER = None
 #HISTORY = []
 #CBITS = None
 #STOPPED_BECAUSE_FULL_BUFFER = None
@@ -61,7 +58,7 @@ class PyLinalg(qproc.Plugin):
 
         logging.info("New simulation")
 
-        state_vector = simu_types.StateVector()
+        qproc_state_vec = simu_types.StateVector()
 
         if simu_input.options.mode == simu_types.Mode.ANALYZE:
             logging.info("Analyze mode")
@@ -73,25 +70,30 @@ class PyLinalg(qproc.Plugin):
         elif simu_input.options.mode == simu_types.Mode.DEFAULT:
             logging.info("Default mode")
 
-            state_vec = np_engine.output_state_vector(simu_input.task.circuit)
-        
-            print("final state ")
-            print(state_vec)
+            circ = simu_input.task.circuit # shorter
 
-            print("sucessfully called submit in default mode")
+            np_state_vec, history = np_engine.simulate(circ) # perform simu
 
-            state_vector.states = []
+            # if no qubits specified then measure all.
+            if simu_input.options.qbits:
+                meas_qubits = simu_input.options.qbits
+            else:
+                meas_qubits = [k for k in range(circ.nbqbits)]
 
-            tmp_state = 0
-            bytes_state = tmp_state.to_bytes((tmp_state.bit_length() // 8) + 1,
+            # measure: 
+            intprob_list = np_engine.measure(np_state_vec, 
+                                         meas_qubits,
+                                         nb_samples=simu_input.options.run_nb)
+
+            qproc_state_vec.states = [] # container: stores final meas samples.
+
+            # convert to good format and put in container.
+            for res_int, prob in intprob_list:
+                bytes_state = res_int.to_bytes((res_int.bit_length() // 8) + 1,
                                                 byteorder="little")    
  
-            result = qpu_types.Result(bytes_state, probability=1.)
-       
-            for _ in range(simu_input.options.run_nb): 
-                state_vector.states.append(result)
-
-            # Implementation goes here.
+                qpu_result = qpu_types.Result(bytes_state, probability=prob)
+                qproc_state_vec.states.append(qpu_result)
 
         else:
             raise task_types.InvalidArgumentException(0, "qat.pylinalg",
@@ -99,5 +101,5 @@ class PyLinalg(qproc.Plugin):
 
         logging.info("End of simulation")
 
-        return state_vector
+        return qproc_state_vec
 

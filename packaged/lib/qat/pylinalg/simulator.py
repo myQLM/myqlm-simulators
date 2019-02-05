@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 @authors Bertrand Marchand
-@brief pylinalg simulator service
+@brief pylinalg simulator engine
 @copyright 2017  Bull S.A.S.  -  All rights reserved.\n
            This is not Free or Open Source software.\n
            Please contact Bull SAS for details about its license.\n
@@ -15,7 +15,7 @@ import qat.comm.datamodel.ttypes as qat_datamodel
 import qat.comm.task.ttypes as task_types
 import qat.core.formula_eval as feval
 
-def output_state_vector(circuit):
+def simulate(circuit):
     """
     Computes state vector at the output of provided circuit.
 
@@ -38,12 +38,17 @@ def output_state_vector(circuit):
     # cbits initilization.
     cbits = [0] * circuit.nbcbits
 
+    # history #TODO
+    history = []
+
     # Loop over gates.
     for op_pos, op in enumerate(circuit.ops):
 
         if op.type == qat_datamodel.OpType.MEASURE:
             # measure op.qubits on state_vec and store in op.cbits
-            measure(state_vec, op.qubits, op.cbits)
+            meas_result = measure(state_vec, op.qubits)
+            for qb, cp in zip(op.qubits, op.cbits):
+                cbits[cb] = meas_result[0][qb]
             continue
 
         if op.type == qat_datamodel.OpType.RESET:
@@ -82,8 +87,32 @@ def output_state_vector(circuit):
         # actual gate application
         state_vec = np.tensordot(tensor, state_vec, axes=(gate_axes, op.qbits))
 
-    return state_vec
+    return state_vec, history
 
+def measure(state_vec, qubits, nb_samples=1):
+
+    probs = np.abs(state_vec**2)
+
+    all_qubits = [k for k in range(len(state_vec.shape))]
+    sum_axes = tuple(qb for qb in all_qubits if qb not in qubits)
+
+    probs = probs.sum(axis=sum_axes)
+
+    cumul = np.cumsum(probs)
+ 
+    intprob_list = []
+
+    for _ in range(nb_samples):
+ 
+        res_int = len(np.where(cumul < np.random.random())[0])
+
+        str_bin_repr = np.binary_repr(res_int, width = len(qubits))
+        index = tuple(int(s) for s in str_bin_repr)
+
+        intprob_list.append((res_int, probs[index]))
+
+    return intprob_list
+            
 
 def mat2nparray(matrix):
     """

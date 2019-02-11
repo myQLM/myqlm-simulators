@@ -46,9 +46,10 @@ def simulate(circuit):
 
         if op.type == qat_datamodel.OpType.MEASURE:
             # measure op.qubits on state_vec and store in op.cbits
-            meas_result = measure(state_vec, op.qubits)
-            for qb, cp in zip(op.qubits, op.cbits):
-                cbits[cb] = meas_result[0][qb]
+            intprob_list = measure(state_vec, op.qbits)
+            res_int, p = intprob_list[0]
+            for k, qb in enumerate(op.qbits):
+                cbits[op.cbits[k]] = res_int >> k & 1
             continue
 
         if op.type == qat_datamodel.OpType.RESET:
@@ -67,7 +68,7 @@ def simulate(circuit):
             # evaluate formula and break if verdict is 1.
             verdict = feval.evaluate(op.formula, cbits)
             if verdict:
-                raise_break(op, op_pos)      
+                raise_break(op, op_pos, cbits)      
             continue
 
         if op.type == qat_datamodel.OpType.CLASSICCTRL:
@@ -87,6 +88,10 @@ def simulate(circuit):
         # actual gate application
         state_vec = np.tensordot(tensor, state_vec, axes=(gate_axes, op.qbits))
 
+        # moving axes back to correct positions
+        cur_positions = range(len(op.qbits))
+        state_vec = np.moveaxis(state_vec, cur_positions, op.qbits)
+
     return state_vec, history
 
 def measure(state_vec, qubits, nb_samples=1):
@@ -99,12 +104,13 @@ def measure(state_vec, qubits, nb_samples=1):
     probs = probs.sum(axis=sum_axes)
 
     cumul = np.cumsum(probs)
- 
+
     intprob_list = []
 
     for _ in range(nb_samples):
  
         res_int = len(np.where(cumul < np.random.random())[0])
+
 
         str_bin_repr = np.binary_repr(res_int, width = len(qubits))
         index = tuple(int(s) for s in str_bin_repr)
@@ -129,7 +135,7 @@ def mat2nparray(matrix):
 
     return A   
 
-def raise_break(op, op_pos):
+def raise_break(op, op_pos, cbits):
      
     exp = task_types.RuntimeException(task_types.Error_Type.BREAK)
     exp.modulename = "PYLINALG"

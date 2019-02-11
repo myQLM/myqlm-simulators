@@ -17,8 +17,9 @@ import qat.comm.qpu.ttypes as qpu_types
 import qat.comm.datamodel.ttypes as datamodel_types
 import qat.comm.qproc.ttypes as simu_types
 import qat.core.qproc as qproc
+import qat.core.simutil as core_simutil
+
 #from bitstring import BitArray as OrigBitArray
-#from qat.core.simutil import rev_bits
 
 from qat.pylinalg import simulator as np_engine
 
@@ -60,6 +61,10 @@ class PyLinalg(qproc.Plugin):
         logging.info("New simulation")
 
         qproc_state_vec = simu_types.StateVector()
+            
+        circ = simu_input.task.circuit # shorter
+
+        np_state_vec, history = np_engine.simulate(circ) # perform simu
 
         if simu_input.options.mode == simu_types.Mode.ANALYZE:
             logging.info("Analyze mode")
@@ -67,14 +72,11 @@ class PyLinalg(qproc.Plugin):
             print("sucessfully called submit in analyze mode")
 
             # Implementation goes here.
-
+            print(np_state_vec)
+    
         elif simu_input.options.mode == simu_types.Mode.DEFAULT:
             logging.info("Default mode")
-
-            circ = simu_input.task.circuit # shorter
-
-            np_state_vec, history = np_engine.simulate(circ) # perform simu
-
+    
             # if no qubits specified then measure all.
             if simu_input.options.qbits:
                 meas_qubits = simu_input.options.qbits
@@ -91,26 +93,27 @@ class PyLinalg(qproc.Plugin):
             # convert to good format and put in container.
             for res_int, prob in intprob_list:
 
-                # byte conversion
-                bytes_state = res_int.to_bytes((res_int.bit_length() // 8) + 1,
-                                                byteorder="little")    
-
                 # accessing amplitude of result
                 indices = [] 
                 for k in range(len(meas_qubits)):
-                    print(res_int >> k)
                     indices.append(res_int >> k & 1)
-
-
+                indices.reverse()
+     
                 amplitude = datamodel_types.ComplexNumber()
-                amplitude.re = np_state_vec[tuple(indices)].real
-                amplitude.im = np_state_vec[tuple(indices)].imag
+                amplitude.re = np_state_vec[tuple(indices)].real # access
+                amplitude.im = np_state_vec[tuple(indices)].imag # access
+
+                # byte conversion
+                res_int = core_simutil.rev_bits(res_int, len(meas_qubits))
+                bytes_state = res_int.to_bytes((res_int.bit_length() // 8) + 1,
+                                                byteorder="little")    
  
                 # final result object
                 qpu_result = qpu_types.Result(bytes_state, 
                                                 probability=prob,
                                                 amplitude=amplitude)
 
+                # append
                 qproc_state_vec.states.append(qpu_result)
 
         else:

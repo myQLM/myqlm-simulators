@@ -1,0 +1,11 @@
+/* Testing phase gate. result amps should be 1,i,i,-1. */
+
+BEGIN
+qubits 2
+
+H q[0]
+H q[1]
+S q[0]
+S q[1]
+
+END

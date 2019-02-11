@@ -6,12 +6,13 @@ from qat.core.circ import readcirc
 from qat.pylinalg import get_qpu_server
 
 BSM_TESTDIR = os.getenv("TESTS_DIR")
+CIRC_PATH = os.path.join(BSM_TESTDIR, "circuits")
 
 class TestSimpleCircExec(unittest.TestCase):
 
     def test_default_mode(self):
    
-        fname = os.path.join(BSM_TESTDIR, "bellstate.circ") 
+        fname = os.path.join(CIRC_PATH, "bellstate.circ") 
         circuit = readcirc(fname)
 
         task = Task(circuit, get_qpu_server())

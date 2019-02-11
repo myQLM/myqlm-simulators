@@ -14,6 +14,7 @@ import numpy as np
 import bxi.base.log as logging
 import qat.comm.task.ttypes as task_types
 import qat.comm.qpu.ttypes as qpu_types
+import qat.comm.datamodel.ttypes as datamodel_types
 import qat.comm.qproc.ttypes as simu_types
 import qat.core.qproc as qproc
 #from bitstring import BitArray as OrigBitArray
@@ -89,10 +90,27 @@ class PyLinalg(qproc.Plugin):
 
             # convert to good format and put in container.
             for res_int, prob in intprob_list:
+
+                # byte conversion
                 bytes_state = res_int.to_bytes((res_int.bit_length() // 8) + 1,
                                                 byteorder="little")    
+
+                # accessing amplitude of result
+                indices = [] 
+                for k in range(len(meas_qubits)):
+                    print(res_int >> k)
+                    indices.append(res_int >> k & 1)
+
+
+                amplitude = datamodel_types.ComplexNumber()
+                amplitude.re = np_state_vec[tuple(indices)].real
+                amplitude.im = np_state_vec[tuple(indices)].imag
  
-                qpu_result = qpu_types.Result(bytes_state, probability=prob)
+                # final result object
+                qpu_result = qpu_types.Result(bytes_state, 
+                                                probability=prob,
+                                                amplitude=amplitude)
+
                 qproc_state_vec.states.append(qpu_result)
 
         else:

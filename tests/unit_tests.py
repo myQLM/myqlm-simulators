@@ -51,7 +51,7 @@ class TestLinalgCompare(unittest.TestCase):
             if circ.nbqbits > 10:
                 no = True
             for op in circ.ops:
-                if op.type > 0:
+                if op.type not in [0,2]:
                     no = True
             if no: #oh no
                 break

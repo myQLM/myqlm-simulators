@@ -1,0 +1,8 @@
+/* Simple test of bell state prep. print amplitudes to test. */
+
+BEGIN
+qubits 2
+
+H q[0]
+CNOT q[0], q[1]
+END

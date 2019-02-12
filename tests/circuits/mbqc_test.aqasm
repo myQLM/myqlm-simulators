@@ -1,0 +1,13 @@
+BEGIN
+qubits 4
+cbits 3
+
+H q[2]
+CNOT q[2],q[0]
+CNOT q[2],q[1]
+H q[2]
+MEAS q[2] c[0]
+CNOT q[1],q[3]
+MEAS q[3] c[1]
+? c[1] : X q[0]
+END

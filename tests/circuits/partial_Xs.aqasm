@@ -1,0 +1,7 @@
+BEGIN
+qubits 10
+cbits 0
+X q[0]
+X q[2]
+X q[9]
+END

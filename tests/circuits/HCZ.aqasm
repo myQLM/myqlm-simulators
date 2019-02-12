@@ -1,0 +1,7 @@
+BEGIN
+qubits 2
+cbits 0
+H q[0]
+H q[1]
+CSIGN q[1],q[0]
+END

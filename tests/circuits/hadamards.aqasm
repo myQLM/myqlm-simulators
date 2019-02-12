@@ -1,0 +1,9 @@
+
+BEGIN
+qubits 5 
+
+H q[0]
+H q[2]
+H q[4]
+
+END

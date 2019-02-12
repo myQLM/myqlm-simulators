@@ -1,0 +1,11 @@
+BEGIN
+qubits 10
+cbits 0
+H q[1]
+CNOT q[0],q[9]
+X q[0]
+S q[1]
+S q[1]
+
+//CNOT q[1], q[2]
+END

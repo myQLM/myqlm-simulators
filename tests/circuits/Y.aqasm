@@ -1,0 +1,6 @@
+BEGIN
+qubits 1 
+
+Y q[0]
+
+END

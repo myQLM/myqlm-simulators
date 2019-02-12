@@ -1,0 +1,11 @@
+/*creating an example where a lot of cnots are needed to reduce the table.
+to check whether stupid CNOTs (where control = target) are generated */
+
+BEGIN
+qubits 4
+
+H q[0]
+CNOT q[0],q[3]
+CNOT q[0],q[2]
+END
+ 

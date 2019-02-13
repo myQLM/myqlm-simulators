@@ -96,68 +96,131 @@ def simulate(circuit):
     return state_vec, history
 
 def measure(state_vec, qubits, nb_samples=1):
+    """
+    Samples measurement results on the specified qubits.
+    No projection is carried out ! See "project" function.
+    Thanks to the absence of projection, several samples can be asked.
 
-    probs = np.abs(state_vec**2)
+    Args:
+        state_vec: nd-array containing full state vector.
+        qubits: list of integers specifying the subset of qubits to measure
+        nb_samples: the number of samples to return.
+
+    Returns:
+        intprob_list: a list (of length nb_samples) containing tuples
+        of the form (integer, probability). The integer is the result of
+        the measurement on the subset of qubits (when converted to binary
+        representation, it needs to have a width of len(qubits)). 
+        The probability is the probability the measurement had to occur.
+        It is useful for renormalizing afterwards.
+
+        In short: it is a list of samples. One sample is a (int, prob) tuple.
+    """
+
+    probs = np.abs(state_vec**2) # full probability vector
 
     all_qubits = [k for k in range(len(state_vec.shape))]
-    sum_axes = tuple(qb for qb in all_qubits if qb not in qubits)
+    sum_axes = tuple(qb for qb in all_qubits if qb not in qubits) #=not(qubits)
+ 
+    probs = probs.sum(axis=sum_axes) # tracing over unmeasured qubits.
 
-    probs = probs.sum(axis=sum_axes)
+    cumul = np.cumsum(probs) # cumulative distribution function.
 
-    cumul = np.cumsum(probs)
-
-    intprob_list = []
+    intprob_list = [] # return object
 
     for _ in range(nb_samples):
  
-        res_int = len(np.where(cumul < np.random.random())[0])
+        res_int = len(np.where(cumul < np.random.random())[0]) # sampling 
 
         str_bin_repr = np.binary_repr(res_int, width = len(qubits))
-        index = tuple(int(s) for s in str_bin_repr)
+        index = tuple(int(s) for s in str_bin_repr) # needed to access prob
 
         intprob_list.append((res_int, probs[index]))
 
     return intprob_list
 
 def project(state_vec, qubits, intprob):
+    """
+    The "measure" function does not project. This is nice when asking for
+    several samples. But the full behavior of a quantum state when undergoing
+    measurement includes a projection onto the result state. This what
+    this function does. In practice, it is used for intermediary measurements.
+    (i.e within measure and reset gates)
 
-    all_qubits = [k for k in range(len(state_vec.shape))]
+    Args:
+        state_vec: The state vector to project, i.e the one from which the
+        results were sampled.
 
-    state_int, prob = intprob
+        qubits: The qubits that were measured. Without this info, we don't
+        to what axes the result corresponds.
 
-    index_assignment = []
-    
+        intprob: a tuple of the form (integer, probability). The integer codes
+        for the value that was measured on the qubits in the list "qubits".
+        The probability is useful for renormalizing without having to 
+        recompute a norm. 
+
+    Returns:
+        state_vec: nd array. The projected state vector. The values of the 
+        qubits in the "qubits" list have been assigned to the measured
+        values.
+
+    """
+
+    all_qubits = [k for k in range(len(state_vec.shape))] # explicit name
+
+    state_int, prob = intprob # result and probability there was to measure it.
+
+    index_assignment = [] # building a nd-array indexing object.
+
     for qb in all_qubits:
         if qb in qubits:
             val = ( state_int >> qubits.index(qb) ) & 1 
-            index_assignment.append(1 - val)
+            index_assignment.append(1 - val) # qb = (1 - val) -> set to 0. 
         else: 
-            index_assignment.append(slice(None))
+            index_assignment.append(slice(None)) # slice(None) = ":" 
 
-    state_vec[tuple(index_assignment)] = 0.
-    state_vec /= np.sqrt(prob)
+    state_vec[tuple(index_assignment)] = 0. # actual projection
+    state_vec /= np.sqrt(prob)              # renormalizing
     
     return state_vec 
 
 def reset(state_vec, qubits):
- 
-    X = np.array([[0,1],[1,0]], dtype=np.complex128)
+    """
+    Resets the value of the specified qubits to 0. It works by measuring each
+    qubit, and then applying an X gate if the result is 1.
 
-    intprob_list = measure(state_vec, qubits)
-    state_vec = project(state_vec, qubits, intprob_list[0])
+    for one qubit, entirely equivalent to, in AQASM:
+    MEAS q[k] c[k]
+    ?c[k] : X q[k]
+
+    Args:
+        state_vec: nd-array containing the full state vector.
+        qubits: the qubits to reset
+
+    Returns:
+        state_vec: nd-array, full state vector, the qubits have been reset.
+    """
+ 
+    X = np.array([[0,1],[1,0]], dtype=np.complex128) # X gate
+
+    intprob_list = measure(state_vec, qubits)               # measure
+    state_vec = project(state_vec, qubits, intprob_list[0]) # project
     res_int, _ = intprob_list[0]
     str_bin_repr = np.binary_repr(res_int, width = len(qubits))
 
     for k, res in enumerate(str_bin_repr):
-        if int(res) == 1:
-            state_vec = np.tensordot(X, state_vec, axes=([1],[qubits[k]])) 
+        if int(res) == 1:                                   # ? c[k] : X q[k]
+            state_vec = np.tensordot(X, state_vec, axes=([1],[qubits[k]])) # X
             state_vec = np.moveaxis(state_vec, 0, qubits[k])        
 
     return state_vec
  
 
 def raise_break(op, op_pos, cbits):
-     
+    """
+    Raises break exception, as a result of a boolean classical formula being
+    evaluated to True.
+    """     
     exp = task_types.RuntimeException(task_types.Error_Type.BREAK)
     exp.modulename = "PYLINALG"
     present_cbits = []

@@ -15,23 +15,24 @@ import qat.comm.datamodel.ttypes as qat_datamodel
 import qat.comm.task.ttypes as task_types
 import qat.core.formula_eval as feval
 
+
 def simulate(circuit):
     """
     Computes state vector at the output of provided circuit.
 
-    State vector is stored as numpy nd-array. 
+    State vector is stored as numpy nd-array.
     It is initialized at |0...0>.
     Then, loop over gates, updating the state vector using np.tensordot
 
     Args:
         circuit: input circuit
 
-    Returns: 
+    Returns:
         state_vec: nd-array containing final state vector.
     """
 
     # Initialization at |0...0>
-    shape = tuple(2 for _ in range(circuit.nbqbits)) 
+    shape = tuple(2 for _ in range(circuit.nbqbits))
     state_vec = np.zeros(shape, dtype=np.complex128)
     state_vec[tuple(0 for _ in range(circuit.nbqbits))] = 1
 
@@ -50,12 +51,12 @@ def simulate(circuit):
             state_vec = project(state_vec, op.qbits, intprob_list[0])
             res_int, p = intprob_list[0]
             for k, qb in enumerate(op.qbits):
-                cbits[op.cbits[k]] = res_int >> k & 1 
+                cbits[op.cbits[k]] = res_int >> k & 1
             continue
 
         if op.type == qat_datamodel.OpType.RESET:
             # measure, if result is 1 apply X.
-            state_vec = reset(state_vec, op.qbits) # contains actual implem.
+            state_vec = reset(state_vec, op.qbits)  # contains actual implem.
             for cb in op.cbits:
                 cbits[cb] = 0
             continue
@@ -69,7 +70,7 @@ def simulate(circuit):
             # evaluate formula and break if verdict is 1.
             verdict = feval.evaluate(op.formula, cbits)
             if verdict:
-                raise_break(op, op_pos, cbits)      
+                raise_break(op, op_pos, cbits)
             continue
 
         if op.type == qat_datamodel.OpType.CLASSICCTRL:
@@ -77,15 +78,15 @@ def simulate(circuit):
             if not all([cbits[x] for x in op.cbits]):
                 continue
 
-        gdef = circuit.gateDic[op.gate]   # retrieving useful info.
-        matrix = mat2nparray(gdef.matrix) # convert matrix to numpy array.
+        gdef = circuit.gateDic[op.gate]    # retrieving useful info.
+        matrix = mat2nparray(gdef.matrix)  # convert matrix to numpy array.
 
         # reshape for easy application.
         tensor = matrix.reshape(tuple(2 for _ in range(2*gdef.arity)))
 
         # axes for tensor dot: last indices of gate tensor.
         gate_axes = [k for k in range(gdef.arity, 2*gdef.arity, 1)]
-        
+
         # actual gate application
         state_vec = np.tensordot(tensor, state_vec, axes=(gate_axes, op.qbits))
 
@@ -93,6 +94,7 @@ def simulate(circuit):
         state_vec = np.moveaxis(state_vec, range(len(op.qbits)), op.qbits)
 
     return state_vec, history
+
 
 def measure(state_vec, qubits, nb_samples=1):
     """
@@ -109,35 +111,36 @@ def measure(state_vec, qubits, nb_samples=1):
         intprob_list: a list (of length nb_samples) containing tuples
         of the form (integer, probability). The integer is the result of
         the measurement on the subset of qubits (when converted to binary
-        representation, it needs to have a width of len(qubits)). 
+        representation, it needs to have a width of len(qubits)).
         The probability is the probability the measurement had to occur.
         It is useful for renormalizing afterwards.
 
         In short: it is a list of samples. One sample is a (int, prob) tuple.
     """
 
-    probs = np.abs(state_vec**2) # full probability vector
+    probs = np.abs(state_vec**2)  # full probability vector
 
     all_qubits = [k for k in range(len(state_vec.shape))]
-    sum_axes = tuple(qb for qb in all_qubits if qb not in qubits) #=not(qubits)
- 
-    probs = probs.sum(axis=sum_axes) # tracing over unmeasured qubits.
+    sum_axes = tuple(qb for qb in all_qubits if qb not in qubits)  # =~(qubits)
 
-    cumul = np.cumsum(probs) # cumulative distribution function.
+    probs = probs.sum(axis=sum_axes)  # tracing over unmeasured qubits.
 
-    intprob_list = [] # return object
+    cumul = np.cumsum(probs)  # cumulative distribution function.
+
+    intprob_list = []  # return object
 
     for _ in range(nb_samples):
- 
-        res_int = len(np.where(cumul < np.random.random())[0]) # sampling 
+
+        res_int = len(np.where(cumul < np.random.random())[0])  # sampling
 
         # index computation. Needed to access probability value.
-        str_bin_repr = np.binary_repr(res_int, width = len(qubits))
-        index = tuple(int(s) for s in str_bin_repr) 
+        str_bin_repr = np.binary_repr(res_int, width=len(qubits))
+        index = tuple(int(s) for s in str_bin_repr)
 
-        intprob_list.append((res_int, probs[index])) # (int, prob) tuple
+        intprob_list.append((res_int, probs[index]))  # (int, prob) tuple
 
     return intprob_list
+
 
 def project(state_vec, qubits, intprob):
     """
@@ -156,33 +159,34 @@ def project(state_vec, qubits, intprob):
 
         intprob: a tuple of the form (integer, probability). The integer codes
         for the value that was measured on the qubits in the list "qubits".
-        The probability is useful for renormalizing without having to 
-        recompute a norm. 
+        The probability is useful for renormalizing without having to
+        recompute a norm.
 
     Returns:
-        state_vec: nd array. The projected state vector. The values of the 
+        state_vec: nd array. The projected state vector. The values of the
         qubits in the "qubits" list have been assigned to the measured
         values.
 
     """
 
-    all_qubits = [k for k in range(len(state_vec.shape))] # explicit name
+    all_qubits = [k for k in range(len(state_vec.shape))]  # explicit name
 
-    state_int, prob = intprob # result and probability there was to measure it.
+    state_int, prob = intprob  # result and probability there was to measure it
 
-    index_assignment = [] # building a nd-array indexing object.
+    index_assignment = []  # building a nd-array indexing object.
 
     for qb in all_qubits:
         if qb in qubits:
-            val = ( state_int >> qubits.index(qb) ) & 1 
-            index_assignment.append(1 - val) # qb = (1 - val) -> set to 0. 
-        else: 
-            index_assignment.append(slice(None)) # slice(None) = ":" 
+            val = (state_int >> qubits.index(qb)) & 1
+            index_assignment.append(1 - val)  # qb = (1 - val) -> set to 0.
+        else:
+            index_assignment.append(slice(None))  # slice(None) = ":"
 
-    state_vec[tuple(index_assignment)] = 0. # actual projection
-    state_vec /= np.sqrt(prob)              # renormalizing
-    
-    return state_vec 
+    state_vec[tuple(index_assignment)] = 0.  # actual projection
+    state_vec /= np.sqrt(prob)               # renormalizing
+
+    return state_vec
+
 
 def reset(state_vec, qubits):
     """
@@ -200,27 +204,27 @@ def reset(state_vec, qubits):
     Returns:
         state_vec: nd-array, full state vector, the qubits have been reset.
     """
- 
-    X = np.array([[0,1],[1,0]], dtype=np.complex128) # X gate
 
-    intprob_list = measure(state_vec, qubits)               # measure
-    state_vec = project(state_vec, qubits, intprob_list[0]) # project
+    X = np.array([[0, 1], [1, 0]], dtype=np.complex128)  # X gate
+
+    intprob_list = measure(state_vec, qubits)                # measure
+    state_vec = project(state_vec, qubits, intprob_list[0])  # project
     res_int, _ = intprob_list[0]
-    str_bin_repr = np.binary_repr(res_int, width = len(qubits))
+    str_bin_repr = np.binary_repr(res_int, width=len(qubits))
 
     for k, res in enumerate(str_bin_repr):
         if int(res) == 1:                                   # ? c[k] : X q[k]
-            state_vec = np.tensordot(X, state_vec, axes=([1],[qubits[k]])) # X
-            state_vec = np.moveaxis(state_vec, 0, qubits[k])        
+            state_vec = np.tensordot(X, state_vec, axes=([1], [qubits[k]]))
+            state_vec = np.moveaxis(state_vec, 0, qubits[k])
 
     return state_vec
- 
+
 
 def raise_break(op, op_pos, cbits):
     """
     Raises break exception, as a result of a boolean classical formula being
     evaluated to True.
-    """     
+    """
     exp = task_types.RuntimeException(task_types.Error_Type.BREAK)
     exp.modulename = "PYLINALG"
     present_cbits = []
@@ -234,17 +238,18 @@ def raise_break(op, op_pos, cbits):
                 [(k, bool(cbits[k])) for k in present_cbits])
     raise exp
 
+
 def mat2nparray(matrix):
     """
     Converts serialized matrix format into numpy array.
     """
 
-    A = np.empty((matrix.nRows, matrix.nCols), dtype=np.complex128) 
-           
+    A = np.empty((matrix.nRows, matrix.nCols), dtype=np.complex128)
+
     cnt = 0
     for i in range(matrix.nRows):
         for j in range(matrix.nCols):
-            A[i,j] = matrix.data[cnt].re + 1j*matrix.data[cnt].im
+            A[i, j] = matrix.data[cnt].re + 1j*matrix.data[cnt].im
             cnt += 1
 
-    return A   
+    return A

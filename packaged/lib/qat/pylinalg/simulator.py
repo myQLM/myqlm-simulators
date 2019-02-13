@@ -50,12 +50,12 @@ def simulate(circuit):
             state_vec = project(state_vec, op.qbits, intprob_list[0])
             res_int, p = intprob_list[0]
             for k, qb in enumerate(op.qbits):
-                cbits[op.cbits[k]] = res_int >> k & 1
+                cbits[op.cbits[k]] = res_int >> k & 1 
             continue
 
         if op.type == qat_datamodel.OpType.RESET:
             # measure, if result is 1 apply X.
-            state_vec = reset(state_vec, op.qbits)
+            state_vec = reset(state_vec, op.qbits) # contains actual implem.
             for cb in op.cbits:
                 cbits[cb] = 0
             continue
@@ -80,18 +80,17 @@ def simulate(circuit):
         gdef = circuit.gateDic[op.gate]   # retrieving useful info.
         matrix = mat2nparray(gdef.matrix) # convert matrix to numpy array.
 
-        #reshape for easy application.
+        # reshape for easy application.
         tensor = matrix.reshape(tuple(2 for _ in range(2*gdef.arity)))
 
-        #axes for tensor dot: last indices of gate tensor.
+        # axes for tensor dot: last indices of gate tensor.
         gate_axes = [k for k in range(gdef.arity, 2*gdef.arity, 1)]
         
         # actual gate application
         state_vec = np.tensordot(tensor, state_vec, axes=(gate_axes, op.qbits))
 
         # moving axes back to correct positions
-        cur_positions = range(len(op.qbits))
-        state_vec = np.moveaxis(state_vec, cur_positions, op.qbits)
+        state_vec = np.moveaxis(state_vec, range(len(op.qbits)), op.qbits)
 
     return state_vec, history
 
@@ -132,10 +131,11 @@ def measure(state_vec, qubits, nb_samples=1):
  
         res_int = len(np.where(cumul < np.random.random())[0]) # sampling 
 
+        # index computation. Needed to access probability value.
         str_bin_repr = np.binary_repr(res_int, width = len(qubits))
-        index = tuple(int(s) for s in str_bin_repr) # needed to access prob
+        index = tuple(int(s) for s in str_bin_repr) 
 
-        intprob_list.append((res_int, probs[index]))
+        intprob_list.append((res_int, probs[index])) # (int, prob) tuple
 
     return intprob_list
 

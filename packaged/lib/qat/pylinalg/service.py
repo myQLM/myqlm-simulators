@@ -82,7 +82,9 @@ class PyLinalg(qproc.Plugin):
        # that's a big if. 
         if simu_input.options.mode == simu_types.Mode.ANALYZE:
             logging.info("Analyze mode")
-
+            
+            # No bufferization so far: if last_state is set, all states 
+            # have already been returned. so empty state_vec is returned.
             if simu_input.options.range.last_state:
                 return qproc_state_vec
 

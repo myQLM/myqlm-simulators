@@ -6,6 +6,8 @@ from qat.core.circ import readcirc
 from qat.pylinalg import get_qpu_server
 from qat.linalg import get_qpu_server as get_linalg_qpu_server
 
+import qat.comm.task.ttypes as task_types
+
 import glob
 
 BSM_TESTDIR = os.getenv("TESTS_DIR")
@@ -51,7 +53,7 @@ class TestLinalgCompare(unittest.TestCase):
             if circ.nbqbits > 10:
                 no = True
             for op in circ.ops:
-                if op.type not in [0,2]:
+                if op.type > 0:
                     no = True
             if no: #oh no
                 break
@@ -73,6 +75,40 @@ class TestLinalgCompare(unittest.TestCase):
             for st in res1.keys():
                 print(res1[st], res2[st])
                 self.assertAlmostEqual(res1[st], res2[st])
+
+class TestControlFlow(unittest.TestCase):
+
+    def test_break(self):
+        
+        circname = os.path.join(CIRC_PATH, "break.circ")
+
+        circ = readcirc(circname)
+        
+        task = Task(circ, get_qpu_server() )
+
+        #exp = task_types.RuntimeException(task_types.Error_Type.BREAK)
+        # TODO: check that the exception we want is raised, not just any.
+
+        raised = False
+
+        try:
+            res = task.execute()
+        except:
+            raised = True
+
+        self.assertTrue(raised)
+
+    def test_formula_and_cctrl(self):
+
+        circname = os.path.join(CIRC_PATH, "boolean.circ")
+
+        circ = readcirc(circname)
+        
+        task = Task(circ, get_qpu_server())
+         
+        res = task.execute()
+    
+        self.assertEqual(res.state.int, 7) 
 
 if __name__ == '__main__':
     unittest.main(argv=['first-arg-is-ignored'], exit=False)

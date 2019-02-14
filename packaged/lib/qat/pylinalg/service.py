@@ -29,7 +29,7 @@ class PyLinalgHandler:
     def reset(self):
         pass
 
-    def submit(self, job):
+    def submit_job(self, job):
         circ = job.circuit
         postp = job.post_processing
         np_state_vec, _ = np_engine.simulate(circ) # perform simu

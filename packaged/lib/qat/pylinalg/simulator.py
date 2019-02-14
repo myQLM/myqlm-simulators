@@ -82,7 +82,7 @@ def simulate(circuit):
         matrix = mat2nparray(gdef.matrix)  # convert matrix to numpy array.
 
         # reshape for easy application.
-        tensor = matrix.reshape(tuple(2 for _ in range(2*gdef.arity)))
+        tensor = matrix.reshape(tuple([2 for _ in range(2*gdef.arity)]))
 
         # axes for tensor dot: last indices of gate tensor.
         gate_axes = [k for k in range(gdef.arity, 2*gdef.arity, 1)]

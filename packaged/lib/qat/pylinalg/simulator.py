@@ -34,7 +34,7 @@ def simulate(circuit):
     # Initialization at |0...0>
     shape = tuple([2 for _ in range(circuit.nbqbits)])
     state_vec = np.zeros(shape, dtype=np.complex128)
-    state_vec[tuple(0 for _ in range(circuit.nbqbits))] = 1
+    state_vec[tuple([0 for _ in range(circuit.nbqbits)])] = 1
 
     # cbits initilization.
     cbits = [0] * circuit.nbcbits
@@ -135,7 +135,7 @@ def measure(state_vec, qubits, nb_samples=1):
 
         # index computation. Needed to access probability value.
         str_bin_repr = np.binary_repr(res_int, width=len(qubits))
-        index = tuple(int(s) for s in str_bin_repr)
+        index = tuple([int(s) for s in str_bin_repr])
 
         intprob_list.append((res_int, probs[index]))  # (int, prob) tuple
 

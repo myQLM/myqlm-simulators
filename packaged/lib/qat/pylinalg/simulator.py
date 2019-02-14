@@ -49,8 +49,8 @@ def simulate(circuit):
             # measure op.qbits on state_vec and store in op.cbits
             intprob_list = measure(state_vec, op.qbits)
             state_vec = project(state_vec, op.qbits, intprob_list[0])
-            res_int, p = intprob_list[0]
-            for k, qb in enumerate(op.qbits):
+            res_int, _ = intprob_list[0]
+            for k, _ in enumerate(op.qbits):
                 cbits[op.cbits[k]] = res_int >> k & 1
             continue
 

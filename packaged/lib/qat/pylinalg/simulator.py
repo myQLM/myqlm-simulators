@@ -32,7 +32,7 @@ def simulate(circuit):
     """
 
     # Initialization at |0...0>
-    shape = tuple(2 for _ in range(circuit.nbqbits))
+    shape = tuple([2 for _ in range(circuit.nbqbits)])
     state_vec = np.zeros(shape, dtype=np.complex128)
     state_vec[tuple(0 for _ in range(circuit.nbqbits))] = 1
 
@@ -120,8 +120,8 @@ def measure(state_vec, qubits, nb_samples=1):
 
     probs = np.abs(state_vec**2)  # full probability vector
 
-    all_qubits = [k for k in range(len(state_vec.shape))]
-    sum_axes = tuple(qb for qb in all_qubits if qb not in qubits)  # =~(qubits)
+    all_qbs = [k for k in range(len(state_vec.shape))]
+    sum_axes = tuple([qb for qb in all_qbs if qb not in qubits])  # =~(qubits)
 
     probs = probs.sum(axis=sum_axes)  # tracing over unmeasured qubits.
 

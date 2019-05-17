@@ -2,7 +2,7 @@ import os
 import unittest
 
 from qat.core.task import Task
-from qat.core.circ import readcirc
+from qat.core import Circuit
 from qat.pylinalg import get_qpu_server
 from qat.linalg import get_qpu_server as get_linalg_qpu_server
 
@@ -14,25 +14,25 @@ CIRC_PATH = os.path.join(BSM_TESTDIR, "circuits")
 class TestSimpleCircExec(unittest.TestCase):
 
     def test_default_mode(self):
-   
-        fname = os.path.join(CIRC_PATH, "bellstate.circ") 
-        circuit = readcirc(fname)
+        """ Testing default mode """
+        fname = os.path.join(CIRC_PATH, "bellstate.circ")
+        circuit = Circuit.load(fname)
 
         task = Task(circuit, get_qpu_server())
 
         result = task.execute()
 
-        self.assertTrue(result.state[0]==result.state[1])
+        self.assertEqual(result.state[0], result.state[1])
 
     def test_analyze_mode(self):
 
-        fname = os.path.join(CIRC_PATH, "bellstate.circ") 
-        circuit = readcirc(fname)
+        fname = os.path.join(CIRC_PATH, "bellstate.circ")
+        circuit = Circuit.load(fname)
 
         task = Task(circuit, get_qpu_server())
-       
+
         for state in task.states():
-            pass 
+            pass
 
 class TestLinalgCompare(unittest.TestCase):
 
@@ -44,7 +44,7 @@ class TestLinalgCompare(unittest.TestCase):
         circuits = []
 
         for name in fnames:
-            circ = readcirc(name)
+            circ = Circuit.load(name)
             no = False
             if len(circ.ops) > 1000:
                 no = True
@@ -61,12 +61,13 @@ class TestLinalgCompare(unittest.TestCase):
             task1 = Task(circ, get_qpu_server())
             task2 = Task(circ, get_linalg_qpu_server())
 
-            res1 = {}           
-            res2 = {}           
- 
+            res1 = {}
+            res2 = {}
+
             for state in task1.states():
+                print(state)
                 res1[state.state.int] = state.amplitude
-    
+
             for state in task2.states():
                 res2[state.state.int] = state.amplitude
 

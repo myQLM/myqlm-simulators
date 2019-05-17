@@ -11,4 +11,4 @@
 @brief
 @namespace qat.pylinalg
 """
-from .service import PyLinalgHandler
+from .service import PyLinalg, get_qpu_server

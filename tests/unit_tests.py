@@ -1,6 +1,8 @@
 import os
 import unittest
+import numpy as np
 
+from qat.lang.AQASM import Program, CNOT, S, H, T
 from qat.core.task import Task
 from qat.core.circ import readcirc
 from qat.pylinalg import get_qpu_server
@@ -59,6 +61,11 @@ class TestLinalgCompare(unittest.TestCase):
                 break
             circuits.append(circ)
 
+        for _ in range(20):
+
+            circ = random_circ(5, 50)
+            circuits.append(circ)
+
         for circ in circuits:
             task1 = Task(circ, get_qpu_server())
             task2 = Task(circ, get_linalg_qpu_server())
@@ -109,6 +116,31 @@ class TestControlFlow(unittest.TestCase):
         res = task.execute()
     
         self.assertEqual(res.state.int, 7) 
+
+def random_circ(n, length):
+
+    prog = Program()
+    reg = prog.qalloc(n)
+
+    l = ["H","S","T","CNOT"]
+
+    for g in range(length):
+        ident = np.random.choice(l)
+        
+        if ident=="CNOT":
+            args = list(np.random.choice(np.arange(n),2,replace=False))
+            prog.apply(CNOT, [reg[a] for a in args])
+        elif ident=="H":
+            arg = np.random.choice(np.arange(n))
+            prog.apply(H, reg[arg])
+        elif ident=="S":
+            arg = np.random.choice(np.arange(n))
+            prog.apply(S, reg[arg])
+        elif ident=="T":
+            arg = np.random.choice(np.arange(n))
+            prog.apply(T, reg[arg])
+
+    return prog.to_circ()
 
 if __name__ == '__main__':
     unittest.main(argv=['first-arg-is-ignored'], exit=False)

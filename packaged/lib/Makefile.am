@@ -29,7 +29,7 @@ nodist_qatpylinalg_PYTHON=		  $(srcdir)/qat/pylinalg/__init__.py
 	mkdir -p $$(dirname $@)
 	touch $*.py
 	cython -D -3 -Werror -Wextra $< -o $*.c
-	gcc -shared -pthread -fPIC -fwrapv -O2 -Wall -fno-strict-aliasing  -I/usr/include/python3.4m -o $@ $*.c
+	gcc -shared -pthread -fPIC -fwrapv -O2 -Wall -fno-strict-aliasing  -I/usr/include/python3.6m -o $@ $*.c
 
 # For installation
 nobase_nodist_python_PYTHON=		  qat/pylinalg/version.py

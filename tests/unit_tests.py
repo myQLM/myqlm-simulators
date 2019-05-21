@@ -7,6 +7,7 @@ from qat.core.task import Task
 from qat.core.circ import readcirc
 from qat.pylinalg import get_qpu_server
 from qat.linalg import get_qpu_server as get_linalg_qpu_server
+from qat.lang.AQASM import Program, X
 
 import qat.comm.task.ttypes as task_types
 
@@ -141,6 +142,35 @@ def random_circ(n, length):
             prog.apply(T, reg[arg])
 
     return prog.to_circ()
+
+class TestBitOrder(unittest.TestCase):
+
+    def test_state_indexing(self):
+        """
+        Args:
+            qpu (QProc): a qpu
+            expected_res (int): the expected result
+            qbits (list<int>): list of qbits to measure
+            n_shots (int): number of shots. If 0, return all nonzero amplitudes
+        """
+
+        fname = os.path.join(CIRC_PATH, "bit_ordering.circ") 
+        circ = readcirc(fname)
+#        prog = Program()
+#        reg = prog.qalloc(4)
+#        prog.apply(X, reg[2])
+#        circ = prog.to_circ()
+
+        for n_shots in [0, 10]:
+            for expected_res, qbits in [(2, [0, 1, 2, 3]), (1, [0, 1, 2])]:
+
+                ref_task = Task(circ, get_qpu_server())
+                if n_shots == 0:
+                    for res in ref_task.states(qbits=qbits):
+                        self.assertEqual(res.state.int, expected_res)
+                else:
+                    for res in ref_task.execute(nb_samples=n_shots, qbits=qbits):
+                        self.assertEqual(res.state.int, expected_res)
 
 if __name__ == '__main__':
     unittest.main(argv=['first-arg-is-ignored'], exit=False)

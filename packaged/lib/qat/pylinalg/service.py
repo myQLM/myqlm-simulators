@@ -121,7 +121,6 @@ class PyLinalg(qproc.Plugin):
                     continue
 
                 # byte conversion
-                int_state = core_simutil.rev_bits(int_state, len(meas_qubits))
                 bytes_state = int_state.to_bytes((int_state.bit_length() // 8) + 1,
                                                 byteorder="little")    
  
@@ -157,7 +156,6 @@ class PyLinalg(qproc.Plugin):
                     amplitude.im = np_state_vec[tuple(indices)].imag # access
 
                 # byte conversion
-                res_int = core_simutil.rev_bits(res_int, len(meas_qubits))
                 bytes_state = res_int.to_bytes((res_int.bit_length() // 8) + 1,
                                                 byteorder="little")    
  

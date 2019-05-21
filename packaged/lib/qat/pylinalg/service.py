@@ -105,9 +105,6 @@ class PyLinalg(QPUHandler):
                         amplitude.re = np_state_vec[tuple(indices)].real # access
                         amplitude.im = np_state_vec[tuple(indices)].imag # access
 
-                    # byte conversion
-                    res_int = core_simutil.rev_bits(res_int, len(meas_qubits))
-
                     # final result object
                     sample = Sample(state=res_int,
                                     probability=prob,

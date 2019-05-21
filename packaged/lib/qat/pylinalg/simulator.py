@@ -12,8 +12,9 @@
 import numpy as np
 
 import qat.comm.datamodel.ttypes as qat_datamodel
-import qat.comm.task.ttypes as task_types
+import qat.comm.exceptions.ttypes as exceptions_types
 import qat.core.formula_eval as feval
+
 
 def simulate(circuit):
     """
@@ -150,15 +151,15 @@ def reset(state_vec, qubits):
 
     for k, res in enumerate(str_bin_repr):
         if int(res) == 1:
-            state_vec = np.tensordot(X, state_vec, axes=([1],[qubits[k]])) 
-            state_vec = np.moveaxis(state_vec, 0, qubits[k])        
+            state_vec = np.tensordot(X, state_vec, axes=([1],[qubits[k]]))
+            state_vec = np.moveaxis(state_vec, 0, qubits[k])
 
     return state_vec
- 
+
 
 def raise_break(op, op_pos, cbits):
-     
-    exp = task_types.RuntimeException(task_types.Error_Type.BREAK)
+
+    exp = exceptions_types.RuntimeException(exceptions_types.ErrorType.BREAK)
     exp.modulename = "PYLINALG"
     present_cbits = []
     for i in op.formula.split(" "):

@@ -12,9 +12,8 @@
 import numpy as np
 
 import qat.comm.datamodel.ttypes as qat_datamodel
-import qat.comm.task.ttypes as task_types
+import qat.comm.exceptions.ttypes as exceptions_types
 import qat.core.formula_eval as feval
-
 
 def simulate(circuit):
     """

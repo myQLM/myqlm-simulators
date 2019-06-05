@@ -13,7 +13,7 @@ $(abs_builddir)/qat/__init__.py: $(abs_builddir)/qat
 
 # Files present inside build and source folders should be installed with a special rule
 qatdir=$(pythondir)/qat
-nodist_qat_PYTHON=		  $(srcdir)/qat/__init__.py
+nodist_qat_PYTHON=$(srcdir)/qat/__init__.py
                 
 $(abs_builddir)/qat/pylinalg:
 	mkdir -p $@
@@ -29,16 +29,18 @@ nodist_qatpylinalg_PYTHON=		  $(srcdir)/qat/pylinalg/__init__.py
 	mkdir -p $$(dirname $@)
 	touch $*.py
 	cython -D -3 -Werror -Wextra $< -o $*.c
-	gcc -shared -pthread -fPIC -fwrapv -O2 -Wall -fno-strict-aliasing  -I/usr/include/python3.4m -o $@ $*.c
+	gcc -shared -pthread -fPIC -fwrapv -O2 -Wall -fno-strict-aliasing  -I/usr/include/python3.6m -o $@ $*.c
 
 # For installation
 nobase_nodist_python_PYTHON=		  qat/pylinalg/version.py
 
 nobase_python_PYTHON=\
-						qat/pylinalg/service.py\
-						qat/pylinalg/simulator.py\
-						qat/pylinalg/simulator.so\
-						qat/pylinalg/qpu.py
+				qat/__init__.py\
+				qat/pylinalg/__init__.py\
+				qat/pylinalg/service.py\
+				qat/pylinalg/simulator.py\
+				qat/pylinalg/simulator.so\
+				qat/pylinalg/qpu.py
 
 
 

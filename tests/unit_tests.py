@@ -2,12 +2,11 @@ import os
 import unittest
 import numpy as np
 
-from qat.lang.AQASM import Program, CNOT, S, H, T
+from qat.lang.AQASM import Program, CNOT, S, H, T, X
 from qat.core.task import Task
-from qat.core.circ import readcirc
+from qat.core.wrappers import Circuit
 from qat.pylinalg import get_qpu_server
 from qat.linalg import get_qpu_server as get_linalg_qpu_server
-from qat.lang.AQASM import Program, X
 
 import qat.comm.task.ttypes as task_types
 

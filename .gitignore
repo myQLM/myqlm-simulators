@@ -31,6 +31,7 @@
 # /misc/
 /misc/pgft-sample.topodump
 /misc/.~lock.bench.ods#
+/misc/notebooks/
 
 # /misc/bench/number_of_digits/
 /misc/bench/number_of_digits/bench

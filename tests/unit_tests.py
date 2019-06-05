@@ -8,7 +8,7 @@ from qat.core.wrappers import Circuit
 from qat.pylinalg import get_qpu_server
 from qat.linalg import get_qpu_server as get_linalg_qpu_server
 
-import qat.comm.task.ttypes as task_types
+import qat.comm.exceptions as exception_types
 
 import glob
 
@@ -20,7 +20,8 @@ class TestSimpleCircExec(unittest.TestCase):
     def test_default_mode(self):
    
         fname = os.path.join(CIRC_PATH, "bellstate.circ") 
-        circuit = readcirc(fname)
+        
+        circuit = Circuit().load(fname)
 
         task = Task(circuit, get_qpu_server())
 
@@ -31,7 +32,7 @@ class TestSimpleCircExec(unittest.TestCase):
     def test_analyze_mode(self):
 
         fname = os.path.join(CIRC_PATH, "bellstate.circ") 
-        circuit = readcirc(fname)
+        circuit = Circuit().load(fname)
 
         task = Task(circuit, get_qpu_server())
        
@@ -48,7 +49,7 @@ class TestLinalgCompare(unittest.TestCase):
         circuits = []
 
         for name in fnames:
-            circ = readcirc(name)
+            circ = Circuit().load(name)
             no = False
             if len(circ.ops) > 1000:
                 no = True
@@ -89,11 +90,11 @@ class TestControlFlow(unittest.TestCase):
         
         circname = os.path.join(CIRC_PATH, "break.circ")
 
-        circ = readcirc(circname)
+        circ = Circuit().load(circname)
         
         task = Task(circ, get_qpu_server() )
 
-        #exp = task_types.RuntimeException(task_types.Error_Type.BREAK)
+        #exp = exception_types.RuntimeException(exception_types.Error_Type.BREAK)
         # TODO: check that the exception we want is raised, not just any.
 
         raised = False
@@ -109,7 +110,7 @@ class TestControlFlow(unittest.TestCase):
 
         circname = os.path.join(CIRC_PATH, "boolean.circ")
 
-        circ = readcirc(circname)
+        circ = Circuit().load(circname)
         
         task = Task(circ, get_qpu_server())
          
@@ -154,7 +155,8 @@ class TestBitOrder(unittest.TestCase):
         """
 
         fname = os.path.join(CIRC_PATH, "bit_ordering.circ") 
-        circ = readcirc(fname)
+        circ = Circuit().load(fname)
+
 #        prog = Program()
 #        reg = prog.qalloc(4)
 #        prog.apply(X, reg[2])

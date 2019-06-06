@@ -37,7 +37,7 @@ class TestSimpleCircExec(unittest.TestCase):
         task = Task(circuit, get_qpu_server())
        
         for state in task.states():
-            pass 
+            self.assertAlmostEqual(state.probability, 0.5) 
 
 class TestLinalgCompare(unittest.TestCase):
 

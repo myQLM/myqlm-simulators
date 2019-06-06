@@ -72,7 +72,7 @@ class PyLinalg(QPUHandler):
                         amplitude = datamodel_types.ComplexNumber()
                         amplitude.re = val.real
                         amplitude.im = val.imag
-                        prob = np.abs(val)
+                        prob = np.abs(val)**2
                     else:
                         prob = val
 

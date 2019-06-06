@@ -224,7 +224,7 @@ def raise_break(op, op_pos, cbits):
     Raises break exception, as a result of a boolean classical formula being
     evaluated to True.
     """
-    exp = task_types.RuntimeException(task_types.Error_Type.BREAK)
+    exp = exception_types.RuntimeException(exception_types.Error_Type.BREAK)
     exp.modulename = "PYLINALG"
     present_cbits = []
     for i in op.formula.split(" "):

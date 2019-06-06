@@ -84,6 +84,44 @@ class TestLinalgCompare(unittest.TestCase):
                 print(res1[st], res2[st])
                 self.assertAlmostEqual(res1[st], res2[st])
 
+    def test_linalg_histogram_compare(self):
+
+        nqbs = 3
+
+        circuits = []
+
+        for _ in range(4):
+
+            circ = random_circ(nqbs, 5)
+            circuits.append(circ)
+
+        for circ in circuits:
+
+            task1 = Task(circ, get_qpu_server())
+            task2 = Task(circ, get_linalg_qpu_server())
+
+            histo1 = np.zeros((2**nqbs,),dtype=float)
+            histo2 = np.zeros((2**nqbs,),dtype=float)
+
+            nbruns = 200
+
+            for _ in range(nbruns):
+
+                res1 = task1.execute()
+                res2 = task2.execute()
+
+                index1 = np.sum([int(res1.state[i])*2**i for i in range(nqbs)])
+                index2 = np.sum([int(res2.state[i])*2**i for i in range(nqbs)])
+
+                histo1[index1] += 1./float(nbruns)
+                histo2[index2] += 1./float(nbruns)
+
+
+            for i in range(2**nqbs):
+                print(histo1[i], histo2[i],np.abs(histo1[i] - histo2[i]))
+                self.assertTrue(np.abs(histo1[i] - histo2[i]) < 0.2 )
+
+
 class TestControlFlow(unittest.TestCase):
 
     def test_break(self):

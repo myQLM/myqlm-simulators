@@ -26,13 +26,14 @@ class PyLinalg(QPUHandler):
     """
     Simple linalg simulator plugin.
     """
+
     def __init__(self):
         super(PyLinalg, self).__init__()
         self._circuit_key = None
 
     def submit_job(self, job):
         circ = job.circuit
-        np_state_vec, _ = np_engine.simulate(circ) # perform simu
+        np_state_vec, _ = np_engine.simulate(circ)  # perform simu
         if job.qubits is not None:
             meas_qubits = job.qubits
         else:
@@ -51,12 +52,12 @@ class PyLinalg(QPUHandler):
                                    file=__file__,
                                    line=current_line_no)
 
-
-        if job.type == 0: # Sampling
-            if job.nbshots == 0: # Returning the full quantum state/proba distr
+        if job.type == 0:  # Sampling
+            if job.nbshots == 0:  # Returning the full state/distribution
                 if not all_qubits:
-                    all_qb = range(circ.nbqbits) # shorter
-                    sum_axes = tuple(qb for qb in all_qb if qb not in meas_qubits)
+                    all_qb = range(circ.nbqbits)  # shorter
+                    sum_axes = tuple(
+                        qb for qb in all_qb if qb not in meas_qubits)
 
                     # state_vec is transformed into vector of PROBABILITIES
                     np_state_vec = np.abs(np_state_vec**2)
@@ -67,7 +68,7 @@ class PyLinalg(QPUHandler):
 
                 # loop over states. val is amp if all_qubits else prob
                 for int_state, val in enumerate(np_state_vec.ravel()):
-                    amplitude = None # in case not all qubits
+                    amplitude = None  # in case not all qubits
                     if all_qubits:
                         amplitude = datamodel_types.ComplexNumber()
                         amplitude.re = val.real
@@ -85,7 +86,7 @@ class PyLinalg(QPUHandler):
 
                     # append
                     result.raw_data.append(sample)
-            else: ## Performing shots
+            else:  # Performing shots
                 intprob_list = np_engine.measure(np_state_vec,
                                                  meas_qubits,
                                                  nb_samples=job.nbshots)
@@ -93,7 +94,7 @@ class PyLinalg(QPUHandler):
                 # convert to good format and put in container.
                 for res_int, prob in intprob_list:
 
-                    amplitude = None # in case not all qubits
+                    amplitude = None  # in case not all qubits
                     if all_qubits:
                         # accessing amplitude of result
                         indices = []
@@ -102,8 +103,10 @@ class PyLinalg(QPUHandler):
                         indices.reverse()
 
                         amplitude = datamodel_types.ComplexNumber()
-                        amplitude.re = np_state_vec[tuple(indices)].real # access
-                        amplitude.im = np_state_vec[tuple(indices)].imag # access
+                        amplitude.re = np_state_vec[tuple(
+                            indices)].real  # access
+                        amplitude.im = np_state_vec[tuple(
+                            indices)].imag  # access
 
                     # final result object
                     sample = Sample(state=res_int,
@@ -115,5 +118,6 @@ class PyLinalg(QPUHandler):
         raise NotImplementedError
 
         return qproc_state_vec
+
 
 get_qpu_server = PyLinalg

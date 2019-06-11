@@ -57,7 +57,7 @@ class PyLinalg(QPUHandler):
                 if not all_qubits:
                     all_qb = range(circ.nbqbits)  # shorter
                     sum_axes = tuple(
-                        qb for qb in all_qb if qb not in meas_qubits)
+                        [qb for qb in all_qb if qb not in meas_qubits])
 
                     # state_vec is transformed into vector of PROBABILITIES
                     np_state_vec = np.abs(np_state_vec**2)
@@ -116,8 +116,6 @@ class PyLinalg(QPUHandler):
                     result.raw_data.append(sample)
             return result
         raise NotImplementedError
-
-        return qproc_state_vec
 
 
 get_qpu_server = PyLinalg

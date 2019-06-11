@@ -86,6 +86,8 @@
 /packaged/lib/*_h.py
 /packaged/lib/Makefile.in
 /packaged/lib/Makefile
+/packaged/lib/qat/pylinalg/__init__.c
+/packaged/lib/qat/pylinalg/__init__.so
 
 # /packaged/src/
 /packaged/src/.dirstamp

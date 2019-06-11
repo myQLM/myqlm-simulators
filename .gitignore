@@ -96,6 +96,7 @@
 /tests/.deps
 /tests/unit_t.trs
 /tests/unit_t
+/tests/func_tests.py
 /tests/report
 /tests/Makefile.in
 

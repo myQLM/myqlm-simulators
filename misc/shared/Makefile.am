@@ -222,8 +222,11 @@ release:
 	fi;
 
 
-BUILT_SOURCES=config.h version.py
+BUILT_SOURCES=config.h version.py setup.py
 CLEANFILES=config.h version.py
+
+setup.py:vcsversion template_setup.py
+	cp template_setup.py $@
 
 version.py:vcsversion template_version.py
 	cp template_version.py $@

@@ -35,6 +35,7 @@ define([INIT_PRODUCT],[
     AC_CONFIG_AUX_DIR([.autotools_cache])
     AC_CONFIG_HEADERS([template_config.h])
     AC_CONFIG_FILES([template_version.py])
+    AC_CONFIG_FILES([template_setup.py])
     AM_INIT_AUTOMAKE([foreign subdir-objects])
     PKG_PROG_PKG_CONFIG
 

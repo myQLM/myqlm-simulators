@@ -18,16 +18,12 @@ nodist_qat_PYTHON=$(srcdir)/qat/__init__.py
 $(abs_builddir)/qat/pylinalg:
 	mkdir -p $@
 
-$(abs_builddir)/qat/pylinalg/__init__.py: $(abs_builddir)/qat/pylinalg
-	touch  $@
-
 # Files present inside build and source folders should be installed with a special rule
 qatpylinalgdir=$(pythondir)/qat/pylinalg
-nodist_qatpylinalg_PYTHON=		  $(srcdir)/qat/pylinalg/__init__.py
+nodist_qatpylinalg_PYTHON=		  $(srcdir)/qat/pylinalg/__init__.so
                 
 %.so: %.py
 	mkdir -p $$(dirname $@)
-	touch $*.py
 	cython -D -3 -Werror -Wextra $< -o $*.c
 	gcc -shared -pthread -fPIC -fwrapv -O2 -Wall -fno-strict-aliasing  -I/usr/include/python3.6m -o $@ $*.c
 
@@ -36,11 +32,10 @@ nobase_nodist_python_PYTHON=		  qat/pylinalg/version.py
 
 nobase_python_PYTHON=\
 				qat/__init__.py\
-				qat/pylinalg/__init__.py\
-				qat/pylinalg/service.py\
-				qat/pylinalg/simulator.py\
+				qat/pylinalg/__init__.so\
+				qat/pylinalg/service.so\
 				qat/pylinalg/simulator.so\
-				qat/pylinalg/qpu.py
+				qat/pylinalg/qpu.so
 
 
 
@@ -48,7 +43,9 @@ qat/pylinalg/version.py:$(abs_top_builddir)/version.py $(abs_builddir)/qat/pylin
 	cp $< $@
 
 
-BUILT_SOURCES=qat/pylinalg/version.py
+BUILT_SOURCES=\
+	qat/pylinalg/version.py \
+	${nobase_python_PYTHON}
 
 dist-hook:
 	mkdir -p $(distdir)/qat
@@ -59,9 +56,7 @@ dist-hook:
                 
 # For generation
 all-local: $(nobase_nodist_python_PYTHON) \
-	            $(abs_builddir)/qat/pylinalg/__init__.py\
-	        $(abs_builddir)/qat/__init__.py
-                
+	       $(abs_builddir)/qat/__init__.py
 
 clean-local:
 	if test $(srcdir) != $(builddir);\

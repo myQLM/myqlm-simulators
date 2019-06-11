@@ -8,7 +8,7 @@ from qat.core.wrappers import Circuit
 from qat.pylinalg import get_qpu_server
 from qat.linalg import get_qpu_server as get_linalg_qpu_server
 
-import qat.comm.exceptions as exception_types
+import qat.comm.exceptions.ttypes as exception_types
 
 import glob
 
@@ -132,14 +132,17 @@ class TestControlFlow(unittest.TestCase):
         
         task = Task(circ, get_qpu_server() )
 
-        #exp = exception_types.RuntimeException(exception_types.Error_Type.BREAK)
+        exp = exception_types.BreakException(exception_types.ErrorType.BREAK)
         # TODO: check that the exception we want is raised, not just any.
 
         raised = False
 
         try:
             res = task.execute()
-        except:
+        except exception_types.BreakException as Exp:
+            self.assertEqual(Exp.code, 10) 
+            self.assertEqual(Exp.modulename, "PYLINALG")
+            self.assertEqual(Exp.gate_index, 3)
             raised = True
 
         self.assertTrue(raised)

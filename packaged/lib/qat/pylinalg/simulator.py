@@ -11,6 +11,7 @@
 
 import numpy as np
 
+import qat.comm.shared.ttypes as shared_types
 import qat.comm.datamodel.ttypes as qat_datamodel
 import qat.comm.exceptions.ttypes as exceptions_types
 import qat.core.formula_eval as feval
@@ -38,7 +39,6 @@ def simulate(circuit):
     # cbits initilization.
     cbits = [0] * circuit.nbcbits
 
-    # history #TODO
     history = []
 
     # Loop over gates.
@@ -48,9 +48,16 @@ def simulate(circuit):
             # measure op.qbits on state_vec and store in op.cbits
             intprob_list = measure(state_vec, op.qbits)
             state_vec = project(state_vec, op.qbits, intprob_list[0])
-            res_int, _ = intprob_list[0]
+            res_int, p = intprob_list[0]
+
             for k, _ in enumerate(op.qbits):
                 cbits[op.cbits[k]] = res_int >> k & 1
+
+            history.append(shared_types.IntermediateMeasure(
+                            gate_pos = op_pos,
+                            cbits = res_int,
+                            probability = p
+                            ))
             continue
 
         if op.type == qat_datamodel.OpType.RESET:
@@ -224,17 +231,23 @@ def raise_break(op, op_pos, cbits):
     Raises break exception, as a result of a boolean classical formula being
     evaluated to True.
     """
-    exp = exception_types.RuntimeException(exception_types.Error_Type.BREAK)
+    exp = exceptions_types.BreakException(exceptions_types.ErrorType.BREAK)
     exp.modulename = "PYLINALG"
+    exp.gate_index = op_pos
+
     present_cbits = []
     for i in op.formula.split(" "):
         try:
             present_cbits += [int(i)]
         except ValueError:
             pass
+
     exp.message = "BREAK at gate #{} : formula : {}, cbits : {}"\
         .format(op_pos, op.formula,
                 [(k, bool(cbits[k])) for k in present_cbits])
+
+    exp.cbits = [cbits[k] for k in present_cbits]
+
     raise exp
 
 

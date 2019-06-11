@@ -16,6 +16,7 @@ import qat.comm.datamodel.ttypes as qat_datamodel
 import qat.comm.exceptions.ttypes as exceptions_types
 import qat.core.formula_eval as feval
 
+
 def simulate(circuit):
     """
     Computes state vector at the output of provided circuit.
@@ -54,10 +55,10 @@ def simulate(circuit):
                 cbits[op.cbits[k]] = res_int >> k & 1
 
             history.append(shared_types.IntermediateMeasure(
-                            gate_pos = op_pos,
-                            cbits = res_int,
-                            probability = p
-                            ))
+                gate_pos=op_pos,
+                cbits=res_int,
+                probability=p
+            ))
             continue
 
         if op.type == qat_datamodel.OpType.RESET:

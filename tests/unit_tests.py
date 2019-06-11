@@ -5,6 +5,7 @@ import numpy as np
 from qat.lang.AQASM import Program, CNOT, S, H, T, X
 from qat.core.task import Task
 from qat.core.wrappers import Circuit
+from qat.pylinalg.service import PyLinalg
 from qat.pylinalg import get_qpu_server
 
 import qat.comm.exceptions.ttypes as exception_types
@@ -38,6 +39,21 @@ class TestSimpleCircExec(unittest.TestCase):
 
         for state in task.states():
             self.assertAlmostEqual(state.probability, 0.5)
+
+    def test_normal_launch_mode(self):
+
+        # Create a small program
+        prog = Program()
+        qubits = prog.qalloc(2)
+        prog.apply(H, qubits[0])
+        prog.apply(CNOT, qubits)
+
+        circ = prog.to_circ()
+
+        # Simulate
+        job = circ.to_job()
+        qpu = PyLinalg()
+        result = qpu.submit_job(job)
 
 
 class TestControlFlow(unittest.TestCase):

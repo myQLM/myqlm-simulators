@@ -14,40 +14,41 @@ import glob
 BSM_TESTDIR = os.getenv("TESTS_DIR")
 CIRC_PATH = os.path.join(BSM_TESTDIR, "circuits")
 
+
 class TestSimpleCircExec(unittest.TestCase):
 
     def test_default_mode(self):
-   
-        fname = os.path.join(CIRC_PATH, "bellstate.circ") 
-        
+
+        fname = os.path.join(CIRC_PATH, "bellstate.circ")
+
         circuit = Circuit().load(fname)
 
         task = Task(circuit, get_qpu_server())
 
         result = task.execute()
 
-        self.assertTrue(result.state[0]==result.state[1])
+        self.assertTrue(result.state[0] == result.state[1])
 
     def test_analyze_mode(self):
 
-        fname = os.path.join(CIRC_PATH, "bellstate.circ") 
+        fname = os.path.join(CIRC_PATH, "bellstate.circ")
         circuit = Circuit().load(fname)
 
         task = Task(circuit, get_qpu_server())
-       
+
         for state in task.states():
-            self.assertAlmostEqual(state.probability, 0.5) 
+            self.assertAlmostEqual(state.probability, 0.5)
 
 
 class TestControlFlow(unittest.TestCase):
 
     def test_break(self):
-        
+
         circname = os.path.join(CIRC_PATH, "break.circ")
 
         circ = Circuit().load(circname)
-        
-        task = Task(circ, get_qpu_server() )
+
+        task = Task(circ, get_qpu_server())
 
         exp = exception_types.BreakException(exception_types.ErrorType.BREAK)
 
@@ -56,7 +57,7 @@ class TestControlFlow(unittest.TestCase):
         try:
             res = task.execute()
         except exception_types.BreakException as Exp:
-            self.assertEqual(Exp.code, 10) 
+            self.assertEqual(Exp.code, 10)
             self.assertEqual(Exp.modulename, "PYLINALG")
             self.assertEqual(Exp.gate_index, 3)
             raised = True
@@ -68,12 +69,12 @@ class TestControlFlow(unittest.TestCase):
         circname = os.path.join(CIRC_PATH, "boolean.circ")
 
         circ = Circuit().load(circname)
-        
+
         task = Task(circ, get_qpu_server())
-         
+
         res = task.execute()
-    
-        self.assertEqual(res.state.int, 7) 
+
+        self.assertEqual(res.state.int, 7)
 
 
 class TestBitOrder(unittest.TestCase):
@@ -87,7 +88,7 @@ class TestBitOrder(unittest.TestCase):
             n_shots (int): number of shots. If 0, return all nonzero amplitudes
         """
 
-        fname = os.path.join(CIRC_PATH, "bit_ordering.circ") 
+        fname = os.path.join(CIRC_PATH, "bit_ordering.circ")
         circ = Circuit().load(fname)
 
         for n_shots in [0, 10]:
@@ -100,6 +101,7 @@ class TestBitOrder(unittest.TestCase):
                 else:
                     for res in ref_task.execute(nb_samples=n_shots, qbits=qbits):
                         self.assertEqual(res.state.int, expected_res)
+
 
 if __name__ == '__main__':
     unittest.main(argv=['first-arg-is-ignored'], exit=False)

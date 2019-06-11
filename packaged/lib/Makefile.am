@@ -20,7 +20,7 @@ $(abs_builddir)/qat/pylinalg:
 
 # Files present inside build and source folders should be installed with a special rule
 qatpylinalgdir=$(pythondir)/qat/pylinalg
-nodist_qatpylinalg_PYTHON=		  $(srcdir)/qat/pylinalg/__init__.so
+nodist_qatpylinalg_PYTHON=		  $(srcdir)/qat/pylinalg/__init__.py
                 
 %.so: %.py
 	mkdir -p $$(dirname $@)

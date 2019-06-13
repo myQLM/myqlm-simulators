@@ -163,6 +163,13 @@ devrpm: generate_devrpm
 
 rpm: log generate_rpm
 
+# Generation of the wheel archive
+generate_wheel:
+	make;
+	${PYTHON} setup.py bdist_wheel
+
+wheel:generate_wheel
+
 # auto_tag2 should be in your PATH
 # This target is for tagging your software in the CVS tree.
 # See DEV_PROCESS.readme for details.

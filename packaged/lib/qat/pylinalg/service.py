@@ -32,6 +32,16 @@ class PyLinalg(QPUHandler):
         self._circuit_key = None
 
     def submit_job(self, job):
+        """
+        Returns a Result structure corresponding to the execution
+        of a Job
+
+        Args:
+            job (:class:`~qat.core.wrappers.Job`): the job to execute
+
+        Returns:
+            :class:`~qat.core.wrappers.Result`: the result
+        """
         circ = job.circuit
         np_state_vec, _ = np_engine.simulate(circ)  # perform simu
         if job.qubits is not None:

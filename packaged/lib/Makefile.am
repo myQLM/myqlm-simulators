@@ -24,7 +24,7 @@ nodist_qatpylinalg_PYTHON=		  $(srcdir)/qat/pylinalg/__init__.py
                 
 %.so: %.py
 	mkdir -p $$(dirname $@)
-	cython -D -3 -Werror -Wextra $< -o $*.c
+	cython -3 -Werror -Wextra $< -o $*.c
 	gcc -shared -pthread -fPIC -fwrapv -O2 -Wall -fno-strict-aliasing  -I/usr/include/python3.6m -o $@ $*.c
 
 # For installation

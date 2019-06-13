@@ -9,11 +9,12 @@ setup(
     url="@PACKAGE_URL@",
     author="Atos Quantum Lab",
     license="TODO",
+    description="Module @PACKAGE@ - Compiled for Atos",
     packages=[module],
     package_dir={module: "packaged/lib/" + path},
     install_requires=["thrift>=0.10", "qat-core>=0.0.9",
                       "qat-lang>=0.0.8", "numpy"],
     package_data={
-        module: ["*.so", "*/*.so"] # Keeping the compiler *.so files
+        module: ["*.so", "*/*.so"]  # Keeping the compiler *.so files
     }
 )

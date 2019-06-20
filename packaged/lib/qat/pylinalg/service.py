@@ -43,7 +43,7 @@ class PyLinalg(QPUHandler):
             :class:`~qat.core.wrappers.Result`: the result
         """
         circ = job.circuit
-        np_state_vec, _ = np_engine.simulate(circ)  # perform simu
+        np_state_vec, history = np_engine.simulate(circ)  # perform simu
         if job.qubits is not None:
             meas_qubits = job.qubits
         else:
@@ -90,9 +90,10 @@ class PyLinalg(QPUHandler):
                     if prob <= threshold:
                         continue
 
-                    sample = Sample(int_state)
-                    sample.amplitude = amplitude
-                    sample.probability = prob
+                    sample = Sample(state=int_state,
+                                    amplitude=amplitude,
+                                    probability=prob,
+                                    intermediate_measures=history)
 
                     # append
                     result.raw_data.append(sample)
@@ -121,7 +122,8 @@ class PyLinalg(QPUHandler):
                     # final result object
                     sample = Sample(state=res_int,
                                     probability=prob,
-                                    amplitude=amplitude)
+                                    amplitude=amplitude,
+                                    intermediate_measures=history)
                     # append
                     result.raw_data.append(sample)
             return result

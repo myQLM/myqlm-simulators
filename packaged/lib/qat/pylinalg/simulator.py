@@ -63,9 +63,14 @@ def simulate(circuit):
 
         if op.type == qat_datamodel.OpType.RESET:
             # measure, if result is 1 apply X.
-            state_vec = reset(state_vec, op.qbits)  # contains actual implem.
+            state_vec, res, prob = reset(state_vec, op.qbits)  # contains actual implem.
             for cb in op.cbits:
                 cbits[cb] = 0
+            history.append(shared_types.IntermediateMeasure(
+                gate_pos=op_pos,
+                cbits=res,
+                probability=prob
+            ))
             continue
 
         if op.type == qat_datamodel.OpType.CLASSIC:
@@ -116,11 +121,11 @@ def measure(state_vec, qubits, nb_samples=1):
 
     Returns:
         intprob_list: a list (of length nb_samples) containing tuples
-        of the form (integer, probability). The integer is the result of
-        the measurement on the subset of qubits (when converted to binary
-        representation, it needs to have a width of len(qubits)).
-        The probability is the probability the measurement had to occur.
-        It is useful for renormalizing afterwards.
+            of the form (integer, probability). The integer is the result of
+            the measurement on the subset of qubits (when converted to binary
+            representation, it needs to have a width of len(qubits)).
+            The probability is the probability the measurement had to occur.
+            It is useful for renormalizing afterwards.
 
         In short: it is a list of samples. One sample is a (int, prob) tuple.
     """
@@ -210,8 +215,12 @@ def reset(state_vec, qubits):
 
     Returns:
         state_vec: nd-array, full state vector, the qubits have been reset.
+        int: result of the measurement on the subset of qubits (when converted to binary
+            representation, it needs to have a width of len(qubits))
+        prob: probability the measurement had to occur.
+        
+        
     """
-
     X = np.array([[0, 1], [1, 0]], dtype=np.complex128)  # X gate
 
     intprob_list = measure(state_vec, qubits)                # measure
@@ -224,7 +233,7 @@ def reset(state_vec, qubits):
             state_vec = np.tensordot(X, state_vec, axes=([1], [qubits[k]]))
             state_vec = np.moveaxis(state_vec, 0, qubits[k])
 
-    return state_vec
+    return state_vec, intprob_list[0][0], intprob_list[0][1]
 
 
 def raise_break(op, op_pos, cbits):

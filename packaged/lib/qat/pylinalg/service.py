@@ -15,7 +15,7 @@ import inspect
 from qat.core.qpu import QPUHandler
 import qat.core.simutil as core_simutil
 
-from qat.comm.shared.ttypes import Sample, Result
+from qat.comm.shared.ttypes import Sample, Result, ProcessingType
 from qat.comm.hardware.ttypes import HardwareSpecs
 from qat.comm.exceptions.ttypes import RuntimeException, ErrorType
 import qat.comm.datamodel.ttypes as datamodel_types
@@ -54,7 +54,7 @@ class PyLinalg(QPUHandler):
 
         result = Result()
         result.raw_data = []
-        if job.type == 1:
+        if job.type == ProcessingType.OBSERVABLE:
             current_line_no = inspect.stack()[0][2]
             raise RuntimeException(code=ErrorType.INVALID_ARGS,
                                    modulename="qat.pylinalg",
@@ -62,7 +62,7 @@ class PyLinalg(QPUHandler):
                                    file=__file__,
                                    line=current_line_no)
 
-        if job.type == 0:  # Sampling
+        if job.type == ProcessingType.SAMPLE:  # Sampling
             if job.nbshots == 0:  # Returning the full state/distribution
                 if not all_qubits:
                     all_qb = range(circ.nbqbits)  # shorter

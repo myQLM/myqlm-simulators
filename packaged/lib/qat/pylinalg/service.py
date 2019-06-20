@@ -17,7 +17,7 @@ import qat.core.simutil as core_simutil
 
 from qat.comm.shared.ttypes import Sample, Result, ProcessingType
 from qat.comm.hardware.ttypes import HardwareSpecs
-from qat.comm.exceptions.ttypes import RuntimeException, ErrorType
+from qat.comm.exceptions.ttypes import RuntimeException, ErrorType, InvalidArgumentException
 import qat.comm.datamodel.ttypes as datamodel_types
 from qat.pylinalg import simulator as np_engine
 
@@ -97,7 +97,7 @@ class PyLinalg(QPUHandler):
 
                     # append
                     result.raw_data.append(sample)
-            else:  # Performing shots
+            elif job.nbshots>0:  # Performing shots
                 intprob_list = np_engine.measure(np_state_vec,
                                                  meas_qubits,
                                                  nb_samples=job.nbshots)
@@ -126,6 +126,11 @@ class PyLinalg(QPUHandler):
                                     intermediate_measures=history)
                     # append
                     result.raw_data.append(sample)
+            else:
+                raise InvalidArgumentException(0, "qat.pylinalg",
+                                               "Invalid number of shots %s"
+                                               % job.nbshots)
+
             return result
         raise NotImplementedError
 

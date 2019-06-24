@@ -5,7 +5,7 @@ import numpy as np
 from qat.lang.AQASM import Program, CNOT, S, H, T, X
 from qat.core.task import Task
 from qat.core.wrappers import Circuit
-from qat.pylinalg.service import PyLinalg
+from qat.pylinalg import PyLinalg
 from qat.pylinalg import get_qpu_server
 
 import qat.comm.exceptions.ttypes as exception_types

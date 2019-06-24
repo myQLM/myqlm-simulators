@@ -53,10 +53,10 @@ def simulate(circuit):
 
             for k, _ in enumerate(op.qbits):
                 cbits[op.cbits[k]] = res_int >> k & 1
-
+  
             history.append(shared_types.IntermediateMeasure(
                 gate_pos=op_pos,
-                cbits=res_int,
+                cbits=[(res_int >> k & 1) for k in range(len(op.qbits))],
                 probability=p
             ))
             continue

@@ -143,7 +143,7 @@ def measure(state_vec, qubits, nb_samples=1):
 
     for _ in range(nb_samples):
 
-        res_int = len(np.where(cumul < np.random.random())[0])  # sampling
+        res_int = np.searchsorted(cumul, np.random.random())  # sampling
 
         # index computation. Needed to access probability value.
         str_bin_repr = np.binary_repr(res_int, width=len(qubits))

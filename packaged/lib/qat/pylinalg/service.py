@@ -2,7 +2,7 @@
 """
 @authors Bertrand Marchand
 @brief pylinalg simulator service
-@copyright 2017  Bull S.A.S.  -  All rights reserved.\n
+@copyright 2019  Bull S.A.S.  -  All rights reserved.\n
            This is not Free or Open Source software.\n
            Please contact Bull SAS for details about its license.\n
            Bull - Rue Jean Jaurès - B.P. 68 - 78340 Les Clayes-sous-Bois
@@ -44,13 +44,13 @@ class PyLinalg(QPUHandler):
         """
         circ = job.circuit
         np_state_vec, history = np_engine.simulate(circ)  # perform simu
+
         if job.qubits is not None:
             meas_qubits = job.qubits
         else:
             meas_qubits = [k for k in range(circ.nbqbits)]
-        all_qubits = False
-        if len(meas_qubits) == circ.nbqbits:
-            all_qubits = True
+
+        all_qubits = (len(meas_qubits) == circ.nbqbits)
 
         result = Result()
         result.raw_data = []
@@ -97,6 +97,7 @@ class PyLinalg(QPUHandler):
 
                     # append
                     result.raw_data.append(sample)
+
             elif job.nbshots>0:  # Performing shots
                 intprob_list = np_engine.measure(np_state_vec,
                                                  meas_qubits,

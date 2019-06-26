@@ -55,6 +55,72 @@ class TestSimpleCircExec(unittest.TestCase):
         qpu = PyLinalg()
         result = qpu.submit_job(job)
 
+        self.assertEqual(len(result.raw_data),2)
+       
+        self.assertAlmostEqual(result.raw_data[0].probability, 0.5) 
+        self.assertTrue(result.raw_data[0].state in [0,3]) 
+        self.assertTrue(result.raw_data[1].state in [0,3]) 
+
+    def test_normal_launch_mode_subset_qb(self):
+
+        # Create a small program
+        prog = Program()
+        qubits = prog.qalloc(2)
+        prog.apply(H, qubits[0])
+        prog.apply(CNOT, qubits)
+
+        circ = prog.to_circ()
+
+        # Simulate
+        job = circ.to_job(qubits=[0])
+        qpu = PyLinalg()
+        result = qpu.submit_job(job)
+
+        self.assertEqual(len(result.raw_data),2)
+         
+        self.assertAlmostEqual(result.raw_data[0].probability, 0.5) 
+        self.assertTrue(result.raw_data[0].state in [0,1]) 
+        self.assertTrue(result.raw_data[1].state in [0,1]) 
+
+    def test_normal_launch_mode_with_nbshots(self):
+
+        # Create a small program
+        prog = Program()
+        qubits = prog.qalloc(2)
+        prog.apply(H, qubits[0])
+        prog.apply(CNOT, qubits)
+
+        circ = prog.to_circ()
+
+        # Simulate
+        job = circ.to_job(nbshots=4)
+        qpu = PyLinalg()
+        result = qpu.submit_job(job)
+
+        self.assertEqual(len(result.raw_data),4)
+       
+        self.assertAlmostEqual(result.raw_data[0].probability, 0.5) 
+
+    def test_normal_launch_mode_with_nbshots_and_qbs(self):
+
+        # Create a small program
+        prog = Program()
+        qubits = prog.qalloc(2)
+        prog.apply(H, qubits[0])
+        prog.apply(CNOT, qubits)
+
+        circ = prog.to_circ()
+
+        # Simulate
+        job = circ.to_job(nbshots=4, qubits=[0])
+        qpu = PyLinalg()
+        result = qpu.submit_job(job)
+
+        self.assertEqual(len(result.raw_data),4)
+       
+        self.assertAlmostEqual(result.raw_data[0].probability, 0.5) 
+        for rd in result.raw_data:
+            self.assertTrue(rd.state in [0,1]) 
 
 class TestControlFlow(unittest.TestCase):
 

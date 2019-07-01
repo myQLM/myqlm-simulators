@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-@authors Bertrand Marchand
-@brief pylinalg simulator engine
-@copyright 2019  Bull S.A.S.  -  All rights reserved.\n
-           This is not Free or Open Source software.\n
-           Please contact Bull SAS for details about its license.\n
-           Bull - Rue Jean Jaurès - B.P. 68 - 78340 Les Clayes-sous-Bois
-@namespace qat.pylinalg
+| @authors Bertrand Marchand
+| @brief pylinalg simulator engine
+| @copyright 2019  Bull S.A.S.  -  All rights reserved.
+|            This is not Free or Open Source software.
+|            Please contact Bull SAS for details about its license.
+|            Bull - Rue Jean Jaurès - B.P. 68 - 78340 Les Clayes-sous-Bois
+| @namespace qat.pylinalg
 """
 
 import numpy as np
@@ -21,15 +21,26 @@ def simulate(circuit):
     """
     Computes state vector at the output of provided circuit.
 
-    State vector is stored as numpy nd-array.
+    State vector is stored as a :class:`numpy.ndarray`.
     It is initialized at |0...0>.
-    Then, loop over gates, updating the state vector using np.tensordot
+    Then, loop over gates, updating the state vector using `np.tensordot`
 
-    Args:
-        circuit: input circuit
+    Parameters
+    ----------
+    circuit : :class:`qat.core.wrappers.Circuit`
+        Input circuit. The circuit to simulate.
 
-    Returns:
-        state_vec: nd-array containing final state vector.
+    Returns
+    -------
+    :obj:`tuple`
+        This function returns a tuple: state_vec, history.        
+            - | state_vec: :class:`numpy.ndarray` containing the final 
+              | state vector. It has one 2-valued index per qubits.
+            - | history: :obj:`list` of :class:`qat.comm.shared_types.IntermediateMeasure`. 
+              | List containing descriptors of the intermediate measurements 
+              | that occured within the circuit, so that the classical branching is 
+              | known to the user.
+
     """
 
     # Initialization at |0...0>
@@ -111,23 +122,32 @@ def simulate(circuit):
 def measure(state_vec, qubits, nb_samples=1):
     """
     Samples measurement results on the specified qubits.
+
     No projection is carried out ! See "project" function.
     Thanks to the absence of projection, several samples can be asked.
 
-    Args:
-        state_vec: nd-array containing full state vector.
-        qubits: list of integers specifying the subset of qubits to measure
-        nb_samples: the number of samples to return.
 
-    Returns:
-        intprob_list: a list (of length nb_samples) containing tuples
-            of the form (integer, probability). The integer is the result of
-            the measurement on the subset of qubits (when converted to binary
-            representation, it needs to have a width of len(qubits)).
-            The probability is the probability the measurement had to occur.
-            It is useful for renormalizing afterwards.
+    Parameters
+    ----------
+    state_vec : :class:`numpy.ndarray` 
+        The :class:`numpy.ndarray` containing full state vector.
+    qubits : :obj:`list` 
+        list of integers specifying the subset of qubits to measure.
+    nb_samples : :obj:`int`
+        the number of samples to return. Set to one by default.
+
+    Returns
+    -------
+    :obj:`list`
+        **intprob_list**: a list (of length nb_samples) containing tuples
+        of the form (integer, probability). The integer is the result of
+        the measurement on the subset of qubits (when converted to binary
+        representation, it needs to have a width of len(qubits)).
+        The probability is the probability the measurement had to occur.
+        It is useful for renormalizing afterwards.
 
         In short: it is a list of samples. One sample is a (int, prob) tuple.
+
     """
 
     probs = np.abs(state_vec**2)  # full probability vector
@@ -156,26 +176,33 @@ def measure(state_vec, qubits, nb_samples=1):
 
 def project(state_vec, qubits, intprob):
     """
+    Projects the state by assigning qubits to specified values.
+
     The "measure" function does not project. This is nice when asking for
     several samples. But the full behavior of a quantum state when undergoing
-    measurement includes a projection onto the result state. This what
+    measurement includes a projection onto the result state. This is what
     this function does. In practice, it is used for intermediary measurements.
     (i.e within measure and reset gates)
 
-    Args:
-        state_vec: The state vector to project, i.e the one from which the
+    Parameters
+    ----------
+    state_vec : :class:`numpy.ndarray`
+        The state vector to project, i.e the one from which the
         results were sampled.
-
-        qubits: The qubits that were measured. Without this info, we don't
+    qubits : :obj:`list`
+        The qubits that were measured, presented as a list of integers. 
+        Without this info, we don't know
         to what axes the result corresponds.
-
-        intprob: a tuple of the form (integer, probability). The integer codes
+    intprob : :obj:`tuple`
+        a tuple of the form (integer, probability). The integer codes
         for the value that was measured on the qubits in the list "qubits".
-        The probability is useful for renormalizing without having to
-        recompute a norm.
+        The probability that the measurement had to occur. It is useful for 
+        renormalizing without having to recompute a norm.
 
-    Returns:
-        state_vec: nd array. The projected state vector. The values of the
+    Returns
+    -------
+    :class:`numpy.ndarray`
+        The projected state vector. The values of the
         qubits in the "qubits" list have been assigned to the measured
         values.
 
@@ -202,23 +229,30 @@ def project(state_vec, qubits, intprob):
 
 def reset(state_vec, qubits):
     """
-    Resets the value of the specified qubits to 0. It works by measuring each
+    Resets the value of the specified qubits to 0. 
+
+    It works by measuring each
     qubit, and then applying an X gate if the result is 1.
 
     for one qubit, entirely equivalent to, in AQASM:
-    MEAS q[k] c[k]
-    ?c[k] : X q[k]
 
-    Args:
-        state_vec: nd-array containing the full state vector.
-        qubits: the qubits to reset
+    | MEAS q[k] c[k]
+    | ?c[k] : X q[k]
 
-    Returns:
-        state_vec: nd-array, full state vector, the qubits have been reset.
-        int: result of the measurement on the subset of qubits (when converted to binary
-            representation, it needs to have a width of len(qubits))
-        prob: probability the measurement had to occur.
-        
+    Parameters
+    ----------
+    state_vec: :class:`numpy.ndarray`
+        nd-array containing the full state vector.    
+    qubits: :obj:`list`
+        list of integers, containing the qubits to reset.
+
+    Returns
+    -------
+    tuple
+        The function returns a tuple (state_vec, int, prob) composed of:
+            - state_vec(`numpy.ndarray`) the full state vector. the specified qubits have been reset.
+            - an integer: result of the measurement on the subset of qubits (when converted to binary representation, it needs to have a width of len(qubits)).
+            - a float: probability the measurement had to occur.     
         
     """
     X = np.array([[0, 1], [1, 0]], dtype=np.complex128)  # X gate

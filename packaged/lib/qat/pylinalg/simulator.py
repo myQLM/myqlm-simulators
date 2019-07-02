@@ -27,7 +27,7 @@ def simulate(circuit):
 
     Parameters
     ----------
-    circuit : :class:`qat.core.wrappers.Circuit`
+    circuit : :class:`qat.comm.datamodel.ttypes.Circuit`
         Input circuit. The circuit to simulate.
 
     Returns

@@ -25,10 +25,14 @@ from qat.pylinalg import simulator as np_engine
 class PyLinalg(QPUHandler):
     """
     Simple linalg simulator plugin.
+
+    Inherits :func:`serve` and :func:`submit` method from :class:`qat.core.qpu.QPUHandler`
+    Only the :func:`submit_job` method is simulator-specific and defined here.
+     
     """
 
     def __init__(self):
-        super(PyLinalg, self).__init__()
+        super(PyLinalg, self).__init__() # calls QPUHandler __init__()
         self._circuit_key = None
 
     def submit_job(self, job):

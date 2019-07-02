@@ -298,6 +298,27 @@ def raise_break(op, op_pos, cbits):
 def mat2nparray(matrix):
     """
     Converts serialized matrix format into numpy array.
+
+    When extracted from the quantum circuit, gate matrices are not
+    directly numpy arrays. They are instances of 
+    :class:`qat.comm.datamodel.Matrix`, an internally-defined structure.
+
+    Parameters
+    ----------
+    matrix : :class:`qat.comm.datamodel.Matrix`
+        The matrix, as extracted from circuit operation, to convert to 
+        :class:`numpy.ndarray`
+
+    Returns
+    -------
+    :class:`numpy.ndarray`
+        returns a :class:`numpy.ndarray` of shape (2*arity,2*arity) containing
+        the matrix data.
+
+        It could directly return a :class:`numpy.ndarray` of the shape we
+        use in :func:`numpy.tensordot`, but as quantum gates are typically
+        represented as matrices, we kept this step.
+
     """
 
     A = np.empty((matrix.nRows, matrix.nCols), dtype=np.complex128)

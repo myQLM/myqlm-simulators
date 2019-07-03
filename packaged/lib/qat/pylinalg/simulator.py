@@ -275,7 +275,7 @@ def raise_break(op, op_pos, cbits):
     Raises break exception, as a result of a boolean classical formula being
     evaluated to True.
     """
-    exp = exceptions_types.BreakException(exceptions_types.ErrorType.BREAK)
+    exp = exceptions_types.QPUException(exceptions_types.ErrorType.BREAK)
     exp.modulename = "PYLINALG"
     exp.gate_index = op_pos
 

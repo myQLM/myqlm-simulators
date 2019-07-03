@@ -15,9 +15,12 @@ import inspect
 from qat.core.qpu import QPUHandler
 import qat.core.simutil as core_simutil
 
-from qat.comm.shared.ttypes import Sample, Result, ProcessingType
+#from qat.comm.shared.ttypes import Sample, Result, ProcessingType
+
+from qat.comm.shared.ttypes import ProcessingType, Sample
+from qat.core.wrappers import Result
 from qat.comm.hardware.ttypes import HardwareSpecs
-from qat.comm.exceptions.ttypes import RuntimeException, ErrorType, InvalidArgumentException
+from qat.comm.exceptions.ttypes import ErrorType, QPUException
 import qat.comm.datamodel.ttypes as datamodel_types
 from qat.pylinalg import simulator as np_engine
 
@@ -60,11 +63,11 @@ class PyLinalg(QPUHandler):
         result.raw_data = []
         if job.type == ProcessingType.OBSERVABLE:
             current_line_no = inspect.stack()[0][2]
-            raise RuntimeException(code=ErrorType.INVALID_ARGS,
-                                   modulename="qat.pylinalg",
-                                   message="Unsupported sampling type",
-                                   file=__file__,
-                                   line=current_line_no)
+            raise QPUException(code=ErrorType.INVALID_ARGS,
+                               modulename="qat.pylinalg",
+                               message="Unsupported sampling type",
+                               file=__file__,
+                               line=current_line_no)
 
         if job.type == ProcessingType.SAMPLE:  # Sampling
             if job.nbshots == 0:  # Returning the full state/distribution
@@ -126,15 +129,17 @@ class PyLinalg(QPUHandler):
 
                     # final result object
                     sample = Sample(state=res_int,
-                                    probability=prob,
-                                    amplitude=amplitude,
                                     intermediate_measures=history)
                     # append
                     result.raw_data.append(sample)
+
+                result.wrap_samples(job.circuit.qregs)
+                if job.aggregate_data:
+                    result.aggregate_data()
+
             else:
-                raise InvalidArgumentException(0, "qat.pylinalg",
-                                               "Invalid number of shots %s"
-                                               % job.nbshots)
+                raise QPUException(ErrorType.INVALID_ARGS, "qat.pylinalg",
+                                   "Invalid number of shots %s"% job.nbshots)
 
             return result
         raise NotImplementedError

@@ -24,6 +24,7 @@ from qat.comm.exceptions.ttypes import ErrorType, QPUException
 import qat.comm.datamodel.ttypes as datamodel_types
 from qat.pylinalg import simulator as np_engine
 
+from qat.lang.linking.plugin import CircuitInliner
 
 class PyLinalg(QPUHandler):
     """
@@ -31,12 +32,13 @@ class PyLinalg(QPUHandler):
 
     Inherits :func:`serve` and :func:`submit` method from :class:`qat.core.qpu.QPUHandler`
     Only the :func:`submit_job` method is simulator-specific and defined here.
-     
+
     """
 
     def __init__(self):
         super(PyLinalg, self).__init__() # calls QPUHandler __init__()
         self._circuit_key = None
+        self.add_plugin(CircuitInliner())
 
     def submit_job(self, job):
         """

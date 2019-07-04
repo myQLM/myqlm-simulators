@@ -119,8 +119,8 @@ class TestSimpleCircExec(unittest.TestCase):
         self.assertEqual(len(result.raw_data),4)
        
         self.assertEqual(result.raw_data[0].probability, None) #No probability if not aggregating data
-        for rd in result:
-            self.assertTrue(rd.state.int in [0,1],
+        for rd in result.raw_data:
+            self.assertTrue(rd.state in [0,1],
                             msg="state= %s"%rd.state) 
 
 class TestControlFlow(unittest.TestCase):

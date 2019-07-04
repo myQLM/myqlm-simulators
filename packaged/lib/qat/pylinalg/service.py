@@ -9,22 +9,16 @@
 @namespace qat.pylinalg
 """
 import numpy as np
-
 import inspect
 
-from qat.core.qpu import QPUHandler
-import qat.core.simutil as core_simutil
-
-#from qat.comm.shared.ttypes import Sample, Result, ProcessingType
-
-from qat.comm.shared.ttypes import ProcessingType, Sample
-from qat.core.wrappers import Result
+from qat.comm.shared.ttypes import Sample, Result, ProcessingType
 from qat.comm.hardware.ttypes import HardwareSpecs
 from qat.comm.exceptions.ttypes import ErrorType, QPUException
 import qat.comm.datamodel.ttypes as datamodel_types
-from qat.pylinalg import simulator as np_engine
-
+from qat.core.qpu import QPUHandler
+import qat.core.simutil as core_simutil
 from qat.lang.linking.plugin import CircuitInliner
+from qat.pylinalg import simulator as np_engine
 
 class PyLinalg(QPUHandler):
     """
@@ -135,9 +129,6 @@ class PyLinalg(QPUHandler):
                     # append
                     result.raw_data.append(sample)
 
-                result.wrap_samples(job.circuit.qregs)
-                if job.aggregate_data:
-                    result.aggregate_data()
 
             else:
                 raise QPUException(ErrorType.INVALID_ARGS, "qat.pylinalg",

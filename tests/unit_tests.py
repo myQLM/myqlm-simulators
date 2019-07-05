@@ -1,16 +1,16 @@
 import os
 import unittest
 import numpy as np
+import glob
 
+import qat.comm.exceptions.ttypes as exception_types
 from qat.lang.AQASM import Program, CNOT, S, H, T, X
 from qat.core.task import Task
 from qat.core.wrappers import Circuit
 from qat.pylinalg import PyLinalg
 from qat.pylinalg import get_qpu_server
 
-import qat.comm.exceptions.ttypes as exception_types
 
-import glob
 
 BSM_TESTDIR = os.getenv("TESTS_DIR")
 CIRC_PATH = os.path.join(BSM_TESTDIR, "circuits")
@@ -23,11 +23,8 @@ class TestSimpleCircExec(unittest.TestCase):
         fname = os.path.join(CIRC_PATH, "bellstate.circ")
 
         circuit = Circuit().load(fname)
-
         task = Task(circuit, get_qpu_server())
-
         result = task.execute()
-
         self.assertTrue(result.state.int == result.state.int)
 
     def test_analyze_mode(self):

@@ -77,8 +77,6 @@ class PyLinalg(QPUHandler):
                     np_state_vec = np.abs(np_state_vec**2)
                     np_state_vec = np_state_vec.sum(axis=sum_axes)
 
-                # setting up threshold NOT IMPLEMENTED! DUMMY VALUE!
-                threshold = 1e-12
 
                 # loop over states. val is amp if all_qubits else prob
                 for int_state, val in enumerate(np_state_vec.ravel()):
@@ -91,7 +89,7 @@ class PyLinalg(QPUHandler):
                     else:
                         prob = val
 
-                    if prob <= threshold:
+                    if prob <= job.amp_threshold**2:
                         continue
 
                     sample = Sample(state=int_state,

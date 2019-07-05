@@ -19,7 +19,7 @@ from qat.core.qpu import QPUHandler
 import qat.core.simutil as core_simutil
 from qat.core.wrappers.result import aggregate_data
 from qat.lang.linking.plugin import CircuitInliner
-from qat.pylinalg import simulator as np_engine
+from .simulator import simulate, measure
 
 class PyLinalg(QPUHandler):
     """
@@ -47,7 +47,7 @@ class PyLinalg(QPUHandler):
             :class:`~qat.core.wrappers.Result`: the result
         """
         circ = job.circuit
-        np_state_vec, history = np_engine.simulate(circ)  # perform simu
+        np_state_vec, history = simulate(circ)  # perform simu
 
         if job.qubits is not None:
             meas_qubits = job.qubits
@@ -103,9 +103,9 @@ class PyLinalg(QPUHandler):
                     result.raw_data.append(sample)
 
             elif job.nbshots>0:  # Performing shots
-                intprob_list = np_engine.measure(np_state_vec,
-                                                 meas_qubits,
-                                                 nb_samples=job.nbshots)
+                intprob_list = measure(np_state_vec,
+                                       meas_qubits,
+                                       nb_samples=job.nbshots)
 
                 # convert to good format and put in container.
                 for res_int, prob in intprob_list:

@@ -17,6 +17,7 @@ from qat.comm.exceptions.ttypes import ErrorType, QPUException
 import qat.comm.datamodel.ttypes as datamodel_types
 from qat.core.qpu import QPUHandler
 import qat.core.simutil as core_simutil
+from qat.core.wrappers.result import aggregate_data
 from qat.lang.linking.plugin import CircuitInliner
 from qat.pylinalg import simulator as np_engine
 
@@ -129,6 +130,8 @@ class PyLinalg(QPUHandler):
                     # append
                     result.raw_data.append(sample)
 
+                if job.aggregate_data:
+                    result = aggregate_data(result)
 
             else:
                 raise QPUException(ErrorType.INVALID_ARGS, "qat.pylinalg",

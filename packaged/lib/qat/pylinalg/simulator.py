@@ -30,13 +30,10 @@ def simulate(circuit):
             circuit to simulate.
 
     Returns:
-        :obj:`tuple` : a tuple: state_vec, interm_measures.
+        :obj:`tuple`: a tuple: state_vec, interm_measures.
             - state_vec: :class:`numpy.ndarray` containing the final
               state vector. It has one 2-valued index per qubits.
-            -interm_measures: :obj:`list` of :class:`qat.comm.shared_types.IntermediateMeasure`.
-              List containing descriptors of the intermediate measurements
-              that occurred within the circuit, so that the classical branching is
-              known to the user.
+            - interm_measures: :obj:`list` of :class:`qat.comm.shared_types.IntermediateMeasure`. List containing descriptors of the intermediate measurements that occurred within the circuit, so that the classical branching is known to the user.
     """
     # Initialization at |0...0>
     shape = tuple([2 for _ in range(circuit.nbqbits)])
@@ -129,14 +126,8 @@ def measure(state_vec, qubits, nb_samples=1):
             by default.
 
     Returns:
-        :obj:`list` ! **intprob_list**: a list (of length nb_samples) containing tuples
-            of the form (integer, probability). The integer is the result of
-            the measurement on the subset of qubits (when converted to binary
-            representation, it needs to have a width of len(qubits)).
-            The probability is the probability the measurement had to occur.
-            It is useful for renormalizing afterwards.
-
-            In short: it is a list of samples. One sample is a (int, prob) tuple.
+        :obj:`list`: **intprob_list**, a list (of length nb_samples) containing tuples of the form (integer, probability). The integer is the result of the measurement on the subset of qubits (when converted to binary representation, it needs to have a width of len(qubits)). The probability is the probability the measurement had to occur. It is useful for renormalizing afterwards.
+        In short: it is a list of samples. One sample is a (int, prob) tuple.
     """
     probs = np.abs(state_vec**2)  # full probability vector
     all_qbs = [k for k in range(len(state_vec.shape))]
@@ -177,9 +168,7 @@ def project(state_vec, qubits, intprob):
             useful for renormalizing without having to recompute a norm.
 
     Returns:
-        :class:`numpy.ndarray`: The projected state vector. The values of the
-            qubits in the "qubits" list have been assigned to the measured
-            values.
+        :class:`numpy.ndarray`: The projected state vector. The values of the qubits in the "qubits" list have been assigned to the measured values.
 
     """
     all_qubits = [k for k in range(len(state_vec.shape))]  # explicit name
@@ -217,9 +206,11 @@ def reset(state_vec, qubits):
         tuple : a tuple (state_vec, int, prob) composed of:
             - state_vec(`numpy.ndarray`) the full state vector. the specified qubits
             have been reset.
+
             - an integer: result of the measurement on the subset of qubits (when
             converted to binary representation, it needs to have a width of
             len(qubits)).
+
             - a float: probability the measurement had to occur.
     """
     X = np.array([[0, 1], [1, 0]], dtype=np.complex128)  # X gate

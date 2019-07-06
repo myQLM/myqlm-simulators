@@ -32,7 +32,7 @@ class PyLinalg(QPUHandler):
 
     def __init__(self):
         super(PyLinalg, self).__init__() # calls QPUHandler __init__()
-        self.add_plugin(CircuitInliner())
+        self.push_plugin(CircuitInliner())
 
     def submit_job(self, job):
         """

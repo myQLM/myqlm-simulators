@@ -8,8 +8,8 @@
            Bull - Rue Jean Jaurès - B.P. 68 - 78340 Les Clayes-sous-Bois
 @namespace qat.pylinalg
 """
-import numpy as np
 import inspect
+import numpy as np
 
 from qat.comm.shared.ttypes import Sample, Result, ProcessingType
 from qat.comm.hardware.ttypes import HardwareSpecs
@@ -32,7 +32,6 @@ class PyLinalg(QPUHandler):
 
     def __init__(self):
         super(PyLinalg, self).__init__() # calls QPUHandler __init__()
-        self._circuit_key = None
         self.add_plugin(CircuitInliner())
 
     def submit_job(self, job):

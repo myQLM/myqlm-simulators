@@ -4,12 +4,11 @@ import numpy as np
 import glob
 
 import qat.comm.exceptions.ttypes as exception_types
-from qat.lang.AQASM import Program, CNOT, S, H, T, X
 from qat.core.task import Task
 from qat.core.wrappers import Circuit
+from qat.lang.AQASM import Program, CNOT, S, H, T, X
 from qat.pylinalg import PyLinalg
 from qat.pylinalg import get_qpu_server
-
 
 
 BSM_TESTDIR = os.getenv("TESTS_DIR")
@@ -95,7 +94,6 @@ class TestSimpleCircExec(unittest.TestCase):
         result = qpu.submit_job(job)
 
         self.assertEqual(len(result.raw_data),4)
-       
         self.assertEqual(result.raw_data[0].probability, None) #no prob if not aggregating data
 
     def test_normal_launch_mode_with_nbshots_and_qbs(self):
@@ -125,21 +123,16 @@ class TestControlFlow(unittest.TestCase):
     def test_break(self):
 
         circname = os.path.join(CIRC_PATH, "break.circ")
-
         circ = Circuit().load(circname)
-
         task = Task(circ, get_qpu_server())
-
         exp = exception_types.QPUException(exception_types.ErrorType.BREAK)
-
         raised = False
 
         try:
             res = task.execute()
         except exception_types.QPUException as Exp:
             self.assertEqual(Exp.code, 10)
-            self.assertEqual(Exp.modulename, "PYLINALG")
-            self.assertEqual(Exp.gate_index, 3)
+            self.assertEqual(Exp.modulename, "qat.pylinalg")
             raised = True
 
         self.assertTrue(raised)
@@ -147,13 +140,9 @@ class TestControlFlow(unittest.TestCase):
     def test_formula_and_cctrl(self):
 
         circname = os.path.join(CIRC_PATH, "boolean.circ")
-
         circ = Circuit().load(circname)
-
         task = Task(circ, get_qpu_server())
-
         res = task.execute()
-
         self.assertEqual(res.state.int, 7)
 
 

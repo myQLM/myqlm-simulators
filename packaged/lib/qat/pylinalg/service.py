@@ -14,12 +14,12 @@ import inspect
 from qat.comm.shared.ttypes import Sample, Result, ProcessingType
 from qat.comm.hardware.ttypes import HardwareSpecs
 from qat.comm.exceptions.ttypes import ErrorType, QPUException
-import qat.comm.datamodel.ttypes as datamodel_types
+from qat.comm.datamodel.ttypes import ComplexNumber
 from qat.core.qpu import QPUHandler
-import qat.core.simutil as core_simutil
 from qat.core.wrappers.result import aggregate_data
 from qat.lang.linking.plugin import CircuitInliner
 from .simulator import simulate, measure
+
 
 class PyLinalg(QPUHandler):
     """
@@ -46,34 +46,25 @@ class PyLinalg(QPUHandler):
         Returns:
             :class:`~qat.core.wrappers.Result`: the result
         """
-        circ = job.circuit
-        np_state_vec, history = simulate(circ)  # perform simu
+        np_state_vec, interm_measures = simulate(job.circuit)  # perform simu
 
         if job.qubits is not None:
             meas_qubits = job.qubits
         else:
-            meas_qubits = [k for k in range(circ.nbqbits)]
+            meas_qubits = list(range(job.circuit.nbqbits))
 
-        all_qubits = (len(meas_qubits) == circ.nbqbits)
+        all_qubits = (len(meas_qubits) == job.circuit.nbqbits)
 
         result = Result()
         result.raw_data = []
-        if job.type == ProcessingType.OBSERVABLE:
-            current_line_no = inspect.stack()[0][2]
-            raise QPUException(code=ErrorType.INVALID_ARGS,
-                               modulename="qat.pylinalg",
-                               message="Unsupported sampling type",
-                               file=__file__,
-                               line=current_line_no)
 
         if job.type == ProcessingType.SAMPLE:  # Sampling
             if job.nbshots == 0:  # Returning the full state/distribution
                 if not all_qubits:
-                    all_qb = range(circ.nbqbits)  # shorter
                     sum_axes = tuple(
-                        [qb for qb in all_qb if qb not in meas_qubits])
+                        [qb for qb in range(job.circuit.nbqbits) if qb not in meas_qubits])
 
-                    # state_vec is transformed into vector of PROBABILITIES
+                    # state_vec is transformed into vector of probabilities
                     np_state_vec = np.abs(np_state_vec**2)
                     np_state_vec = np_state_vec.sum(axis=sum_axes)
 
@@ -82,9 +73,7 @@ class PyLinalg(QPUHandler):
                 for int_state, val in enumerate(np_state_vec.ravel()):
                     amplitude = None  # in case not all qubits
                     if all_qubits:
-                        amplitude = datamodel_types.ComplexNumber()
-                        amplitude.re = val.real
-                        amplitude.im = val.imag
+                        amplitude = ComplexNumber(re=val.real, im=val.imag)
                         prob = np.abs(val)**2
                     else:
                         prob = val
@@ -95,12 +84,12 @@ class PyLinalg(QPUHandler):
                     sample = Sample(state=int_state,
                                     amplitude=amplitude,
                                     probability=prob,
-                                    intermediate_measures=history)
+                                    intermediate_measures=interm_measures)
 
                     # append
                     result.raw_data.append(sample)
 
-            elif job.nbshots>0:  # Performing shots
+            elif job.nbshots > 0:  # Performing shots
                 intprob_list = measure(np_state_vec,
                                        meas_qubits,
                                        nb_samples=job.nbshots)
@@ -111,20 +100,16 @@ class PyLinalg(QPUHandler):
                     amplitude = None  # in case not all qubits
                     if all_qubits:
                         # accessing amplitude of result
-                        indices = []
-                        for k in range(len(meas_qubits)):
-                            indices.append(res_int >> k & 1)
+                        indices = [res_int >> k & 1
+                                   for k in range(len(meas_qubits))]
                         indices.reverse()
 
-                        amplitude = datamodel_types.ComplexNumber()
-                        amplitude.re = np_state_vec[tuple(
-                            indices)].real  # access
-                        amplitude.im = np_state_vec[tuple(
-                            indices)].imag  # access
+                        amp = np_state_vec[tuple(indices)]
+                        amplitude = ComplexNumber(re=amp.real, im=amp.imag)
 
                     # final result object
                     sample = Sample(state=res_int,
-                                    intermediate_measures=history)
+                                    intermediate_measures=interm_measures)
                     # append
                     result.raw_data.append(sample)
 
@@ -132,11 +117,23 @@ class PyLinalg(QPUHandler):
                     result = aggregate_data(result)
 
             else:
-                raise QPUException(ErrorType.INVALID_ARGS, "qat.pylinalg",
+                raise QPUException(ErrorType.INVALID_ARGS,
+                                   "qat.pylinalg",
                                    "Invalid number of shots %s"% job.nbshots)
 
             return result
-        raise NotImplementedError
+
+        if job.type == ProcessingType.OBSERVABLE:
+            current_line_no = inspect.stack()[0][2]
+            raise QPUException(code=ErrorType.INVALID_ARGS,
+                               modulename="qat.pylinalg",
+                               message="Unsupported job type OBSERVABLE",
+                               file=__file__,
+                               line=current_line_no)
+
+        raise QPUException(ErrorType.INVALID_ARGS,
+                           "qat.pylinalg",
+                           "Unsupported job type %s"%job.type)
 
 
 get_qpu_server = PyLinalg

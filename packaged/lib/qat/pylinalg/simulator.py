@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 @authors Bertrand Marchand
-@brief pylinalg simulator service
+@brief pylinalg simulator core functions
 @copyright 2019  Bull S.A.S.  -  All rights reserved.\n
            This is not Free or Open Source software.\n
            Please contact Bull SAS for details about its license.\n

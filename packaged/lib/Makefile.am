@@ -34,8 +34,7 @@ nobase_python_PYTHON=\
 				qat/__init__.py\
 				qat/pylinalg/__init__.so\
 				qat/pylinalg/service.so\
-				qat/pylinalg/simulator.so\
-				qat/pylinalg/qpu.so
+				qat/pylinalg/simulator.so
 
 
 

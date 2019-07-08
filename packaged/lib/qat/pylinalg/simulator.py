@@ -45,7 +45,7 @@ def simulate(circuit):
 
     interm_measures = []
     # Loop over gates.
-    for op_pos, op in enumerate(circuit.ops):
+    for op_pos, op in enumerate(circuit):
 
         if op.type == datamodel_types.OpType.MEASURE:
             # measure op.qbits on state_vec and store in op.cbits
@@ -252,7 +252,7 @@ def mat2nparray(matrix):
     """Converts serialized matrix format into numpy array.
 
     When extracted from the quantum circuit, gate matrices are not
-    directly numpy arrays. They are instances of 
+    directly numpy arrays. They are instances of
     :class:`qat.comm.datamodel.Matrix`, an internally-defined structure.
 
     Args:

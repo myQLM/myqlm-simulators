@@ -17,7 +17,7 @@ from qat.comm.exceptions.ttypes import ErrorType, QPUException
 from qat.comm.datamodel.ttypes import ComplexNumber
 from qat.core.qpu import QPUHandler
 from qat.core.wrappers.result import aggregate_data
-from qat.lang.linking.plugin import CircuitInliner
+from qat.core.wrappers import Circuit as WCircuit
 from .simulator import simulate, measure
 
 
@@ -32,7 +32,6 @@ class PyLinalg(QPUHandler):
 
     def __init__(self):
         super(PyLinalg, self).__init__() # calls QPUHandler __init__()
-        self.push_plugin(CircuitInliner())
 
     def submit_job(self, job):
         """
@@ -45,6 +44,8 @@ class PyLinalg(QPUHandler):
         Returns:
             :class:`~qat.core.wrappers.Result`: the result
         """
+        if not isinstance(job.circuit, WCircuit):
+            job.circuit = WCircuit(job.circuit)
         np_state_vec, interm_measures = simulate(job.circuit)  # perform simu
 
         if job.qubits is not None:

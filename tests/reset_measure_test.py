@@ -41,10 +41,8 @@ class TestMeasure(unittest.TestCase):
 
         qpu = PyLinalg()
 
-        result = qpu.submit(circ.to_job(nbshots=5))
+        result = qpu.submit(circ.to_job(nbshots=5, aggregate_data=False))
         for res in result:
-
-            print(res)
 
             self.assertAlmostEqual(res.intermediate_measures[0].probability, 0.5, delta=1e-10)
             self.assertEqual(res.intermediate_measures[0].cbits[0], res.state.int)

@@ -17,7 +17,7 @@ import qat.core.simutil as core_simutil
 
 from qat.comm.shared.ttypes import Sample, Result
 from qat.comm.hardware.ttypes import HardwareSpecs
-from qat.comm.exceptions.ttypes import RuntimeException, ErrorType
+from qat.comm.exceptions.ttypes import PluginException, ErrorType
 import qat.comm.datamodel.ttypes as datamodel_types
 from qat.pylinalg import simulator as np_engine
 
@@ -46,7 +46,7 @@ class PyLinalg(QPUHandler):
         result.raw_data = []
         if job.type == 1:
             current_line_no = inspect.stack()[0][2]
-            raise RuntimeException(code=ErrorType.INVALID_ARGS,
+            raise PluginException(code=ErrorType.INVALID_ARGS,
                                    modulename="qat.pylinalg",
                                    message="Unsupported sampling type",
                                    file=__file__,

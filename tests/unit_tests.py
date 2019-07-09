@@ -66,13 +66,13 @@ class TestControlFlow(unittest.TestCase):
 
         task = Task(circ, get_qpu_server())
 
-        exp = exception_types.BreakException(exception_types.ErrorType.BREAK)
+        exp = exception_types.QPUException(exception_types.ErrorType.BREAK)
 
         raised = False
 
         try:
             res = task.execute()
-        except exception_types.BreakException as Exp:
+        except exception_types.QPUException as Exp:
             self.assertEqual(Exp.code, 10)
             self.assertEqual(Exp.modulename, "PYLINALG")
             self.assertEqual(Exp.gate_index, 3)

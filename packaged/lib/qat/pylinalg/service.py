@@ -57,7 +57,6 @@ class PyLinalg(QPUHandler):
 
         result = Result()
         result.raw_data = []
-
         if job.type == ProcessingType.SAMPLE:  # Sampling
             if job.nbshots == 0:  # Returning the full state/distribution
                 if not all_qubits:

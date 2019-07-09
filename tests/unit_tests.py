@@ -126,6 +126,7 @@ class TestControlFlow(unittest.TestCase):
         circ = Circuit().load(circname)
         task = Task(circ, get_qpu_server())
         exp = exception_types.QPUException(exception_types.ErrorType.BREAK)
+        exp = exception_types.QPUException(exception_types.ErrorType.BREAK)
         raised = False
 
         try:

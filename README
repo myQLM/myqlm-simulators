@@ -1,0 +1,16 @@
+Python Linalg
+===============
+
+
+A simple numpy based simulator for the QLM platform.
+
+
+installation
+----------------
+
+$ python3 setup.py install
+
+Running tests
+-------------------
+
+$python3 setup.py test

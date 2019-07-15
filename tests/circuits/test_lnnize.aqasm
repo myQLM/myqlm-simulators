@@ -1,8 +1,0 @@
-BEGIN
-qubits 5 
-cbits 0
-CNOT q[0],q[4]
-CNOT q[3],q[1]
-
-CCNOT q[0],q[1],q[4]
-END

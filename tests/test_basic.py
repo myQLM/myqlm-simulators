@@ -11,26 +11,56 @@ from qat.pylinalg import PyLinalg
 from qat.pylinalg import get_qpu_server
 
 
-BSM_TESTDIR = os.getenv("TESTS_DIR")
-CIRC_PATH = os.path.join(BSM_TESTDIR, "circuits")
+
+def generate_bell_state():
+    prog = Program()
+    qbits = prog.qalloc(2)
+    prog.apply(H, qbits[0])
+    prog.apply(CNOT, qbits)
+    return prog.to_circ()
+
+def generate_break():
+    prog = Program()
+    qbits = prog.qalloc(3)
+    cbits = prog.calloc(3)
+    prog.apply(X, qbits[1])
+    prog.measure(qbits[0], cbits[0])
+    prog.measure(qbits[1], cbits[1])
+    prog.cbreak(cbits[1] & (~ cbits[0]))
+    return prog.to_circ()
+
+def generate_boolean():
+    prog = Program()
+    qbits = prog.qalloc(3)
+    cbits = prog.calloc(3)
+    prog.apply(X, qbits[1])
+    prog.measure(qbits[0], cbits[0])
+    prog.measure(qbits[1], cbits[1])
+    prog.logic(cbits[2], cbits[1] & ~ cbits[0])
+    prog.cc_apply(cbits[2], X, qbits[2])
+    prog.apply(X, qbits[0])
+    return prog.to_circ()
+
+def generate_bit_ordering():
+    prog = Program()
+    qbits = prog.qalloc(4)
+    prog.apply(X, qbits[2])
+    return prog.to_circ()
+
 
 
 class TestSimpleCircExec(unittest.TestCase):
 
     def test_default_mode(self):
 
-        fname = os.path.join(CIRC_PATH, "bellstate.circ")
-
-        circuit = Circuit().load(fname)
+        circuit = generate_bell_state()
         task = Task(circuit, get_qpu_server())
         result = task.execute()
         self.assertTrue(result.state.int == result.state.int)
 
     def test_analyze_mode(self):
 
-        fname = os.path.join(CIRC_PATH, "bellstate.circ")
-        circuit = Circuit().load(fname)
-
+        circuit = generate_bell_state()
         task = Task(circuit, get_qpu_server())
 
         for state in task.states():
@@ -52,7 +82,7 @@ class TestSimpleCircExec(unittest.TestCase):
         result = qpu.submit_job(job)
 
         self.assertEqual(len(result.raw_data),2)
-       
+
         self.assertAlmostEqual(result.raw_data[0].probability, 0.5)
         self.assertTrue(result.raw_data[0].state in [0,3])
         self.assertTrue(result.raw_data[1].state in [0,3])
@@ -73,10 +103,10 @@ class TestSimpleCircExec(unittest.TestCase):
         result = qpu.submit_job(job)
 
         self.assertEqual(len(result.raw_data),2)
-         
-        self.assertAlmostEqual(result.raw_data[0].probability, 0.5) 
-        self.assertTrue(result.raw_data[0].state in [0,1]) 
-        self.assertTrue(result.raw_data[1].state in [0,1]) 
+
+        self.assertAlmostEqual(result.raw_data[0].probability, 0.5)
+        self.assertTrue(result.raw_data[0].state in [0,1])
+        self.assertTrue(result.raw_data[1].state in [0,1])
 
     def test_normal_launch_mode_with_nbshots(self):
 
@@ -112,18 +142,17 @@ class TestSimpleCircExec(unittest.TestCase):
         result = qpu.submit_job(job)
 
         self.assertEqual(len(result.raw_data),4)
-       
+
         self.assertEqual(result.raw_data[0].probability, None) #No probability if not aggregating data
         for rd in result.raw_data:
             self.assertTrue(rd.state in [0,1],
-                            msg="state= %s"%rd.state) 
+                            msg="state= %s"%rd.state)
 
 class TestControlFlow(unittest.TestCase):
 
     def test_break(self):
 
-        circname = os.path.join(CIRC_PATH, "break.circ")
-        circ = Circuit().load(circname)
+        circ = generate_break()
         task = Task(circ, get_qpu_server())
         exp = exception_types.QPUException(exception_types.ErrorType.BREAK)
         exp = exception_types.QPUException(exception_types.ErrorType.BREAK)
@@ -140,8 +169,7 @@ class TestControlFlow(unittest.TestCase):
 
     def test_formula_and_cctrl(self):
 
-        circname = os.path.join(CIRC_PATH, "boolean.circ")
-        circ = Circuit().load(circname)
+        circ = generate_boolean()
         task = Task(circ, get_qpu_server())
         res = task.execute()
         self.assertEqual(res.state.int, 7)
@@ -150,17 +178,7 @@ class TestControlFlow(unittest.TestCase):
 class TestBitOrder(unittest.TestCase):
 
     def test_state_indexing(self):
-        """
-        Args:
-            qpu (QProc): a qpu
-            expected_res (int): the expected result
-            qbits (list<int>): list of qbits to measure
-            n_shots (int): number of shots. If 0, return all nonzero amplitudes
-        """
-
-        fname = os.path.join(CIRC_PATH, "bit_ordering.circ")
-        circ = Circuit().load(fname)
-
+        circ = generate_bit_ordering()
         for n_shots in [0, 10]:
             for expected_res, qbits in [(2, [0, 1, 2, 3]), (1, [0, 1, 2])]:
 

@@ -1,5 +1,0 @@
-BEGIN
-qubits 8
-cbits 0
-X q[7]
-END

@@ -1,8 +1,0 @@
-BEGIN
-qubits 2
-
-H q[0]
-CNOT q[0],q[1]
-RESET q[0]
-
-END

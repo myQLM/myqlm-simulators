@@ -1,9 +1,0 @@
-/* testing handling numbers of qubits beyond length of standard int */
-
-BEGIN
-qubits 1000 
-
-H q[0]
-H q[800]
-
-END

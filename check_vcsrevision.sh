@@ -1,1 +1,0 @@
-misc/shared/check_vcsrevision.sh

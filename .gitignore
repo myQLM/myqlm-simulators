@@ -1,0 +1,8 @@
+build/
+dist/
+.eggs/
+qat_pylinalg*
+*/__pycache__/
+*/*/__pycache__/
+*/*/*/__pycache__/
+

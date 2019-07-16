@@ -24,7 +24,8 @@ setup(
     license="Atos myQLM EULA",
     packages=find_namespace_packages(),
     test_suite="tests",
-    install_requires=["qat-core>=0.0.8"],
+    install_requires=["thrift==0.10", "qat-core>=0.0.9",
+                      "qat-lang>=0.0.8", "numpy"],
     tests_require=['pytest'],
     cmdclass = {'test': PyTest},
 )

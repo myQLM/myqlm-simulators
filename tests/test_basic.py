@@ -177,10 +177,14 @@ class TestControlFlow(unittest.TestCase):
 
 class TestBitOrder(unittest.TestCase):
 
-    def test_state_indexing(self):
+    def test_bit_ordering(self):
         circ = generate_bit_ordering()
         for n_shots in [0, 10]:
-            for expected_res, qbits in [(2, [0, 1, 2, 3]), (1, [0, 1, 2])]:
+#            for expected_res, qbits in [(2, [0, 1, 2, 3]), (1, [0, 1, 2])]:
+            for expected_res, qbits in [(2, [0, 1, 2, 3]),
+                                        (1, [0, 1, 2]),
+                                        (2, [2, 3]),
+                                        (1, [3, 2])]:
 
                 ref_task = Task(circ, get_qpu_server())
                 if n_shots == 0:

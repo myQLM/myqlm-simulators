@@ -133,6 +133,15 @@ def measure(state_vec, qubits, nb_samples=1):
     all_qbs = [k for k in range(len(state_vec.shape))]
     sum_axes = tuple([qb for qb in all_qbs if qb not in qubits])  # =~(qubits)
     probs = probs.sum(axis=sum_axes)  # tracing over unmeasured qubits.
+
+    # reordering axes in the order specified by qubit list.
+    cur_inds = sorted(qubits) # current probs indices
+    
+    for target, qb in enumerate(qubits): # putting indices where they should be.
+        cur = cur_inds.index(qb)
+        probs = probs.swapaxes(target, cur)
+        cur_inds[target], cur_inds[cur] =  cur_inds[cur], cur_inds[target] 
+
     cumul = np.cumsum(probs)  # cumulative distribution function.
 
     intprob_list = []  # return object

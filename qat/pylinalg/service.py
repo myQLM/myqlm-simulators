@@ -67,6 +67,16 @@ class PyLinalg(QPUHandler):
                     np_state_vec = np.abs(np_state_vec**2)
                     np_state_vec = np_state_vec.sum(axis=sum_axes)
 
+                    # At this point axes might not be in the same order 
+                    # as in meas_qubits: restoring this order now:
+
+                    svec_inds = sorted(meas_qubits) # current np_state_vec 
+                                                    # indices
+
+                    for target, qb in enumerate(meas_qubits):
+                        cur = svec_inds.index(qb)
+                        np_state_vec = np_state_vec.swapaxes(target, cur)
+                        svec_inds[target], svec_inds[cur] =  svec_inds[cur], svec_inds[target] 
 
                 # loop over states. val is amp if all_qubits else prob
                 for int_state, val in enumerate(np_state_vec.ravel()):

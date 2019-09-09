@@ -22,7 +22,7 @@ setup(
     version="0.0.2",
     author="Atos Quantum Lab",
     license="Atos myQLM EULA",
-    packages=find_namespace_packages(),
+    packages=find_namespace_packages(include=["qat.*"]),
     test_suite="tests",
     install_requires=["thrift==0.10", "qat-core>=0.0.9",
                       "qat-lang>=0.0.8", "numpy"],

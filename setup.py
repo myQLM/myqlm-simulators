@@ -18,7 +18,7 @@ class PyTest(TestCommand):
         sys.exit(errno)
 
 setup(
-    name="qat-pylinalg",
+    name="myqlm-simulators",
     version="0.0.2",
     author="Atos Quantum Lab",
     license="Atos myQLM EULA",

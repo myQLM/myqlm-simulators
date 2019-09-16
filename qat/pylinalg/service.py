@@ -55,6 +55,9 @@ class PyLinalg(QPUHandler):
 
         all_qubits = (len(meas_qubits) == job.circuit.nbqbits)
 
+        if not job.amp_threshold:
+            job.amp_threshold = 0.0
+
         result = Result()
         result.raw_data = []
         if job.type == ProcessingType.SAMPLE:  # Sampling

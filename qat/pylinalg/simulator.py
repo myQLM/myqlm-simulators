@@ -16,6 +16,7 @@ import qat.comm.datamodel.ttypes as datamodel_types
 import qat.comm.exceptions.ttypes as exceptions_types
 import qat.core.formula_eval as feval
 
+from qat.core.util import extract_syntax
 
 def simulate(circuit):
     """
@@ -30,10 +31,10 @@ def simulate(circuit):
             circuit to simulate.
 
     Returns:
-        :obj:`tuple`: a tuple: state_vec, interm_measures.
+        :obj:`tuple`: a tuple: state_vec, interm_measurements.
             - state_vec: :class:`numpy.ndarray` containing the final
               state vector. It has one 2-valued index per qubits.
-            - interm_measures: :obj:`list` of :class:`qat.comm.shared_types.IntermediateMeasure`. List containing descriptors of the intermediate measurements that occurred within the circuit, so that the classical branching is known to the user.
+            - interm_measurements: :obj:`list` of :class:`qat.comm.shared_types.IntermediateMeasurement`. List containing descriptors of the intermediate measurements that occurred within the circuit, so that the classical branching is known to the user.
     """
     # Initialization at |0...0>
     shape = tuple([2 for _ in range(circuit.nbqbits)])
@@ -43,7 +44,7 @@ def simulate(circuit):
     # cbits initilization.
     cbits = [0] * circuit.nbcbits
 
-    interm_measures = []
+    interm_measurements = []
     # Loop over gates.
     for op_pos, op in enumerate(circuit):
 
@@ -56,7 +57,7 @@ def simulate(circuit):
             for k in range(len(op.qbits)):
                 cbits[op.cbits[k]] = res_int >> k & 1
 
-            interm_measures.append(shared_types.IntermediateMeasure(
+            interm_measurements.append(shared_types.IntermediateMeasurement(
                 gate_pos=op_pos,
                 cbits=[(res_int >> k & 1) for k in range(len(op.qbits))],
                 probability=prob
@@ -68,7 +69,7 @@ def simulate(circuit):
             state_vec, res, prob = reset(state_vec, op.qbits)  # contains actual implem.
             for cb in op.cbits:
                 cbits[cb] = 0
-            interm_measures.append(shared_types.IntermediateMeasure(
+            interm_measurements.append(shared_types.IntermediateMeasurement(
                 gate_pos=op_pos,
                 cbits=res,
                 probability=prob
@@ -93,6 +94,18 @@ def simulate(circuit):
                 continue
 
         gdef = circuit.gateDic[op.gate]    # retrieving useful info.
+
+        # Checking if the matrix has a matrix
+
+        if not gdef.matrix:
+            raise exceptions_types.QPUException(code=exceptions_types.ErrorType.ILLEGAL_GATES,
+                               modulename="qat.pylinalg",
+                               file="qat/pylinalg/simulator.py",
+                               line=103,
+                               message="Gate {} has no matrix!"\
+                               .format(extract_syntax(gdef, circuit.gateDic)[0]))
+
+
         matrix = mat2nparray(gdef.matrix)  # convert matrix to numpy array.
 
         # reshape for easy application.
@@ -107,7 +120,7 @@ def simulate(circuit):
         # moving axes back to correct positions
         state_vec = np.moveaxis(state_vec, range(len(op.qbits)), op.qbits)
 
-    return state_vec, interm_measures
+    return state_vec, interm_measurements
 
 
 def measure(state_vec, qubits, nb_samples=1):
@@ -136,11 +149,11 @@ def measure(state_vec, qubits, nb_samples=1):
 
     # reordering axes in the order specified by qubit list.
     cur_inds = sorted(qubits) # current probs indices
-    
+
     for target, qb in enumerate(qubits): # putting indices where they should be.
         cur = cur_inds.index(qb)
         probs = probs.swapaxes(target, cur)
-        cur_inds[target], cur_inds[cur] =  cur_inds[cur], cur_inds[target] 
+        cur_inds[target], cur_inds[cur] =  cur_inds[cur], cur_inds[target]
 
     cumul = np.cumsum(probs)  # cumulative distribution function.
 

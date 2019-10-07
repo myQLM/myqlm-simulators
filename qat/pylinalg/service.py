@@ -46,7 +46,7 @@ class PyLinalg(QPUHandler):
         """
         if not isinstance(job.circuit, WCircuit):
             job.circuit = WCircuit(job.circuit)
-        np_state_vec, interm_measures = simulate(job.circuit)  # perform simu
+        np_state_vec, interm_measurements = simulate(job.circuit)  # perform simu
 
         if job.qubits is not None:
             meas_qubits = job.qubits
@@ -70,16 +70,16 @@ class PyLinalg(QPUHandler):
                     np_state_vec = np.abs(np_state_vec**2)
                     np_state_vec = np_state_vec.sum(axis=sum_axes)
 
-                    # At this point axes might not be in the same order 
+                    # At this point axes might not be in the same order
                     # as in meas_qubits: restoring this order now:
 
-                    svec_inds = sorted(meas_qubits) # current np_state_vec 
+                    svec_inds = sorted(meas_qubits) # current np_state_vec
                                                     # indices
 
                     for target, qb in enumerate(meas_qubits):
                         cur = svec_inds.index(qb)
                         np_state_vec = np_state_vec.swapaxes(target, cur)
-                        svec_inds[target], svec_inds[cur] =  svec_inds[cur], svec_inds[target] 
+                        svec_inds[target], svec_inds[cur] =  svec_inds[cur], svec_inds[target]
 
                 # loop over states. val is amp if all_qubits else prob
                 for int_state, val in enumerate(np_state_vec.ravel()):
@@ -96,7 +96,7 @@ class PyLinalg(QPUHandler):
                     sample = Sample(state=int_state,
                                     amplitude=amplitude,
                                     probability=prob,
-                                    intermediate_measures=interm_measures)
+                                    intermediate_measurements=interm_measurements)
 
                     # append
                     result.raw_data.append(sample)
@@ -121,7 +121,7 @@ class PyLinalg(QPUHandler):
 
                     # final result object
                     sample = Sample(state=res_int,
-                                    intermediate_measures=interm_measures)
+                                    intermediate_measurements=interm_measurements)
                     # append
                     result.raw_data.append(sample)
 

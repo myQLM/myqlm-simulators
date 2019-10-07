@@ -5,13 +5,13 @@ import unittest
 from qat.core.task import Task
 from qat.lang.AQASM import Program, H
 from qat.pylinalg import get_qpu_server as get_pylinalg_qpu
-from qat.pylinalg import PyLinalg 
+from qat.pylinalg import PyLinalg
 
 
 class TestReset(unittest.TestCase):
     def test_reset(self):
         """test that reset gate works
-        FIXME in 'analyze' mode, not testing intermediate_measures
+        FIXME in 'analyze' mode, not testing intermediate_measurements
         FIXME not testing if resetting several qbits
         """
         # program with final state: qbit 0 : 0 with 100% prob,
@@ -24,9 +24,9 @@ class TestReset(unittest.TestCase):
 
         ref_task = Task(circ, get_pylinalg_qpu())
         for res in ref_task.execute(nb_samples=5):
-    
+
             self.assertEqual(res.state.int, 0)
-            self.assertAlmostEqual(res.intermediate_measures[0].probability, 0.5, delta=1e-10)
+            self.assertAlmostEqual(res.intermediate_measurements[0].probability, 0.5, delta=1e-10)
 
 class TestMeasure(unittest.TestCase):
     def test_measure(self):
@@ -44,8 +44,8 @@ class TestMeasure(unittest.TestCase):
         result = qpu.submit(circ.to_job(nbshots=5, aggregate_data=False))
         for res in result:
 
-            self.assertAlmostEqual(res.intermediate_measures[0].probability, 0.5, delta=1e-10)
-            self.assertEqual(res.intermediate_measures[0].cbits[0], res.state.int)
+            self.assertAlmostEqual(res.intermediate_measurements[0].probability, 0.5, delta=1e-10)
+            self.assertEqual(res.intermediate_measurements[0].cbits[0], res.state.int)
 
 if __name__ == '__main__':
     unittest.main(argv=['first-arg-is-ignored'], exit=False)

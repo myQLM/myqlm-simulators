@@ -36,8 +36,8 @@ class TestClassicalControl(unittest.TestCase):
         task = Task(circ, get_pylinalg_qpu())
 
         for res in task.states():
-            self.assertEqual(res.intermediate_measures[0].cbits[0], 1)
-            self.assertEqual(res.intermediate_measures[1].cbits[0], 1)
+            self.assertEqual(res.intermediate_measurements[0].cbits[0], 1)
+            self.assertEqual(res.intermediate_measurements[1].cbits[0], 1)
 
 class TestLogicGates(unittest.TestCase):
     def test_logic(self):
@@ -45,8 +45,8 @@ class TestLogicGates(unittest.TestCase):
         task = Task(circ, get_pylinalg_qpu())
 
         for res in task.states():
-            self.assertEqual(int(res.intermediate_measures[0].cbits[0]), 1)
-            self.assertEqual(int(res.intermediate_measures[1].cbits[0]), 0)
+            self.assertEqual(int(res.intermediate_measurements[0].cbits[0]), 1)
+            self.assertEqual(int(res.intermediate_measurements[1].cbits[0]), 0)
 
 if __name__ == '__main__':
     unittest.main(argv=['first-arg-is-ignored'], exit=False)

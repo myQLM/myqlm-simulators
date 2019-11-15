@@ -62,24 +62,23 @@ class PyLinalg(QPUHandler):
         result.raw_data = []
         if job.type == ProcessingType.SAMPLE:  # Sampling
             if job.nbshots == 0:  # Returning the full state/distribution
-                if not all_qubits:
-                    sum_axes = tuple(
-                        [qb for qb in range(job.circuit.nbqbits) if qb not in meas_qubits])
+                sum_axes = tuple(
+                    [qb for qb in range(job.circuit.nbqbits) if qb not in meas_qubits])
 
-                    # state_vec is transformed into vector of probabilities
-                    np_state_vec = np.abs(np_state_vec**2)
-                    np_state_vec = np_state_vec.sum(axis=sum_axes)
+                # state_vec is transformed into vector of probabilities
+                np_state_vec = np.abs(np_state_vec**2)
+                np_state_vec = np_state_vec.sum(axis=sum_axes)
 
-                    # At this point axes might not be in the same order
-                    # as in meas_qubits: restoring this order now:
+                # At this point axes might not be in the same order
+                # as in meas_qubits: restoring this order now:
 
-                    svec_inds = sorted(meas_qubits) # current np_state_vec
-                                                    # indices
+                svec_inds = sorted(meas_qubits) # current np_state_vec
+                                                # indices
 
-                    for target, qb in enumerate(meas_qubits):
-                        cur = svec_inds.index(qb)
-                        np_state_vec = np_state_vec.swapaxes(target, cur)
-                        svec_inds[target], svec_inds[cur] =  svec_inds[cur], svec_inds[target]
+                for target, qb in enumerate(meas_qubits):
+                    cur = svec_inds.index(qb)
+                    np_state_vec = np_state_vec.swapaxes(target, cur)
+                    svec_inds[target], svec_inds[cur] =  svec_inds[cur], svec_inds[target]
 
                 # loop over states. val is amp if all_qubits else prob
                 for int_state, val in enumerate(np_state_vec.ravel()):

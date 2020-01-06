@@ -269,6 +269,47 @@ def raise_break(op, op_pos, cbits):
 
     raise exp
 
+def compute_observable_average(state_vec, observable):
+    """Directly computes an observable average from a state vector.
+
+    For each term of the observable, the state vector is copied, tensored
+    with the appropriate Pauli matrices, and scalar-producted back with the
+    original state vector. The result is multiplied by the coefficient of the
+    Pauli term and added to the global result.
+
+    Args:
+        state_vec (:class:`numpy.ndarray`) : The state vector, as returned
+        by the "simulate" function. i.e of shape (2,...,2) with 1 index per
+        qubits.
+        
+        observable (:class:`qat.core.Observable`): The observable, described
+        as a coefficiented sum of Pauli products.
+
+    Returns:        
+        float : The exact value of the observable average, like one would
+        get by performing an infinite number of measurements of the observable
+        on the state vector. 
+    """
+
+    final_value = 0. 
+    nbqbits = len(list(state_vec.shape)) # number of qubits
+
+    for term in observable.terms:
+        local_sv = np.copy(state_vec) # local copy of the state vector
+
+        for k, qb in enumerate(term.qbits):
+        # performing tensor products with Pauli matrices of the term.
+            pauli_matrix = pauli_dict[term.op[k]] 
+
+            # tensor products: exactly like gate applications in simulate func.
+            local_sv = np.tensordot(pauli_matrix, local_sv, axes=([1],[qb]))
+            local_sv = np.moveaxis(local_sv, [0], [qb])
+   
+        # adding to final value, with coeff. 
+        final_value += term.coeff * np.tensordot(state_vec.conj(), local_sv,
+                                                 axes=nbqbits)
+
+    return final_value    
 
 def mat2nparray(matrix):
     """Converts serialized matrix format into numpy array.
@@ -297,3 +338,8 @@ def mat2nparray(matrix):
         A[i, j] = matrix.data[cnt].re + 1j*matrix.data[cnt].im
 
     return A
+
+pauli_dict = {}
+pauli_dict["X"] = np.array([[0.,1.],[1.,0.]])
+pauli_dict["Y"] = np.array([[0,-1j],[1j,0]])
+pauli_dict["Z"] = np.array([[1.,0.],[0.,-1.]])

@@ -18,7 +18,7 @@ from qat.comm.datamodel.ttypes import ComplexNumber
 from qat.core.qpu import QPUHandler
 from qat.core.wrappers.result import aggregate_data
 from qat.core.wrappers import Circuit as WCircuit
-from .simulator import simulate, measure
+from .simulator import simulate, measure, compute_observable_average
 
 
 class PyLinalg(QPUHandler):
@@ -135,12 +135,11 @@ class PyLinalg(QPUHandler):
             return result
 
         if job.type == ProcessingType.OBSERVABLE:
-            current_line_no = inspect.stack()[0][2]
-            raise QPUException(code=ErrorType.INVALID_ARGS,
-                               modulename="qat.pylinalg",
-                               message="Unsupported job type OBSERVABLE",
-                               file=__file__,
-                               line=current_line_no)
+
+            result.value = compute_observable_average(np_state_vec, 
+                                                      job.observable)
+
+            return result
 
         raise QPUException(ErrorType.INVALID_ARGS,
                            "qat.pylinalg",

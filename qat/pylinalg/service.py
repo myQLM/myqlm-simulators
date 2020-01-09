@@ -46,7 +46,12 @@ class PyLinalg(QPUHandler):
         """
         if not isinstance(job.circuit, WCircuit):
             job.circuit = WCircuit(job.circuit)
-        np_state_vec, interm_measurements = simulate(job.circuit)  # perform simu
+
+        has_int_meas = has_intermediate_measurements(job.circuit)
+
+        if (job.nbshots == 0) or (not has_int_meas):
+
+            np_state_vec, interm_measures = simulate(job.circuit)  # perform simu
 
         if job.qubits is not None:
             meas_qubits = job.qubits
@@ -101,12 +106,37 @@ class PyLinalg(QPUHandler):
                     result.raw_data.append(sample)
 
             elif job.nbshots > 0:  # Performing shots
-                intprob_list = measure(np_state_vec,
-                                       meas_qubits,
-                                       nb_samples=job.nbshots)
+
+                if has_int_meas:
+                # if intermediate measurements, the entire simulation must
+                # be redone for every shot. Because the intermediate measurements
+                # might change the output distribution probability.
+
+                    intprob_list = []
+                    interm_meas_list = []
+                    for _ in range(job.nbshots):
+                        np_state_vec, interm_measures = simulate(job.circuit)
+                                                            # perform simu
+                        intprob = measure(np_state_vec,
+                                           meas_qubits,
+                                           nb_samples=1)
+
+                        intprob_list.append(intprob[0])
+                        interm_meas_list.append(interm_measures)
+
+                else:
+                # no need to redo the simulation entirely. Just sampling.
+
+                    intprob_list = measure(np_state_vec,
+                                           meas_qubits,
+                                           nb_samples=job.nbshots)
+
+                    interm_meas_list = [[] for _ in range(job.nbshots)]
 
                 # convert to good format and put in container.
-                for res_int, prob in intprob_list:
+                for k, intprob in enumerate(intprob_list):
+
+                    res_int, prob = intprob
 
                     amplitude = None  # in case not all qubits
                     if all_qubits:
@@ -120,7 +150,7 @@ class PyLinalg(QPUHandler):
 
                     # final result object
                     sample = Sample(state=res_int,
-                                    intermediate_measurements=interm_measurements)
+                            intermediate_measurements=interm_meas_list[k])
                     # append
                     result.raw_data.append(sample)
 
@@ -134,6 +164,7 @@ class PyLinalg(QPUHandler):
 
             return result
 
+
         if job.type == ProcessingType.OBSERVABLE:
 
             result.value = compute_observable_average(np_state_vec, 
@@ -145,5 +176,18 @@ class PyLinalg(QPUHandler):
                            "qat.pylinalg",
                            "Unsupported job type %s"%job.type)
 
+def has_intermediate_measurements(circuit):
+    """
+    Simple utility function.
+
+    Args:
+        circuit (Circuit): a circuit
+    Returns:
+        bool: True if circuit contains intermediate measures
+    """
+    for op in circuit.ops:
+        if op.type == OpType.MEASURE or  op.type == OpType.RESET:
+            return True
+    return False
 
 get_qpu_server = PyLinalg

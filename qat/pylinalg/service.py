@@ -14,7 +14,7 @@ import numpy as np
 from qat.comm.shared.ttypes import Sample, Result, ProcessingType
 from qat.comm.hardware.ttypes import HardwareSpecs
 from qat.comm.exceptions.ttypes import ErrorType, QPUException
-from qat.comm.datamodel.ttypes import ComplexNumber
+from qat.comm.datamodel.ttypes import ComplexNumber, OpType
 from qat.core.qpu import QPUHandler
 from qat.core.wrappers.result import aggregate_data
 from qat.core.wrappers import Circuit as WCircuit
@@ -51,7 +51,7 @@ class PyLinalg(QPUHandler):
 
         if (job.nbshots == 0) or (not has_int_meas):
 
-            np_state_vec, interm_measures = simulate(job.circuit)  # perform simu
+            np_state_vec, interm_measurements = simulate(job.circuit)  # perform simu
 
         if job.qubits is not None:
             meas_qubits = job.qubits
@@ -115,14 +115,14 @@ class PyLinalg(QPUHandler):
                     intprob_list = []
                     interm_meas_list = []
                     for _ in range(job.nbshots):
-                        np_state_vec, interm_measures = simulate(job.circuit)
+                        np_state_vec, interm_measurements = simulate(job.circuit)
                                                             # perform simu
                         intprob = measure(np_state_vec,
                                            meas_qubits,
                                            nb_samples=1)
 
                         intprob_list.append(intprob[0])
-                        interm_meas_list.append(interm_measures)
+                        interm_meas_list.append(interm_measurements)
 
                 else:
                 # no need to redo the simulation entirely. Just sampling.
@@ -183,7 +183,7 @@ def has_intermediate_measurements(circuit):
     Args:
         circuit (Circuit): a circuit
     Returns:
-        bool: True if circuit contains intermediate measures
+        bool: True if circuit contains intermediate measurements
     """
     for op in circuit.ops:
         if op.type == OpType.MEASURE or  op.type == OpType.RESET:

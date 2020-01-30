@@ -225,15 +225,16 @@ def reset(state_vec, qubits):
         qubits (:obj:`list`): list of integers, containing the qubits to reset.
 
     Returns:
-        tuple : a tuple (state_vec, int, prob) composed of:
-            - state_vec(`numpy.ndarray`) the full state vector. the specified qubits
-            have been reset.
+        a tuple (state_vec, int, prob):
 
-            - an integer: result of the measurement on the subset of qubits (when
-            converted to binary representation, it needs to have a width of
-            len(qubits)).
+         - state_vec(`numpy.ndarray`) the full state vector. the specified qubits
+         have been reset.
 
-            - a float: probability the measurement had to occur.
+         - an integer: result of the measurement on the subset of qubits (when
+         converted to binary representation, it needs to have a width of
+         len(qubits)).
+
+         - a float: probability the measurement had to occur.
     """
     X = np.array([[0, 1], [1, 0]], dtype=np.complex128)  # X gate
 

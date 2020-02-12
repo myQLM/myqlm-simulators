@@ -22,8 +22,8 @@ def simulate(circuit):
     """
     Computes state vector at the output of provided circuit.
 
-    State vector is stored as a :class:`numpy.ndarray`.
-    It is initialized at |0...0>.
+    State vector is stored as a :class:`numpy.ndarray`
+    It is initialized at :math:`|0^n\\rangle`.
     Then, loop over gates, updating the state vector using `np.tensordot`
 
     Args:
@@ -225,16 +225,13 @@ def reset(state_vec, qubits):
         qubits (:obj:`list`): list of integers, containing the qubits to reset.
 
     Returns:
-        a tuple (state_vec, int, prob):
-
-         - state_vec(`numpy.ndarray`) the full state vector. the specified qubits
-         have been reset.
-
-         - an integer: result of the measurement on the subset of qubits (when
-         converted to binary representation, it needs to have a width of
-         len(qubits)).
-
-         - a float: probability the measurement had to occur.
+        (state_vec, int, prob): a tuple composed of:
+            - state_vec(`numpy.ndarray`) the full state vector. the specified qubits
+              have been reset.
+            - an integer: result of the measurement on the subset of qubits (when
+              converted to binary representation, it needs to have a width of
+              len(qubits)).
+            - a float: probability the measurement had to occur.
     """
     X = np.array([[0, 1], [1, 0]], dtype=np.complex128)  # X gate
 

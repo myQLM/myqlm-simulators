@@ -289,7 +289,11 @@ def compute_observable_average(state_vec, observable):
         on the state vector. 
     """
 
-    final_value = 0. 
+    if observable.constant_coeff:
+        final_value = observable.constant_coeff
+    else:
+        final_value = 0.
+
     nbqbits = len(list(state_vec.shape)) # number of qubits
 
     for term in observable.terms:

@@ -67,12 +67,14 @@ class PyLinalg(QPUHandler):
         result.raw_data = []
         if job.type == ProcessingType.SAMPLE:  # Sampling
             if job.nbshots == 0:  # Returning the full state/distribution
-                sum_axes = tuple(
+
+                if not all_qubits:
+                    sum_axes = tuple(
                     [qb for qb in range(job.circuit.nbqbits) if qb not in meas_qubits])
 
-                # state_vec is transformed into vector of probabilities
-                np_state_vec = np.abs(np_state_vec**2)
-                np_state_vec = np_state_vec.sum(axis=sum_axes)
+                    # state_vec is transformed into vector of probabilities
+                    np_state_vec = np.abs(np_state_vec**2)
+                    np_state_vec = np_state_vec.sum(axis=sum_axes)
 
                 # At this point axes might not be in the same order
                 # as in meas_qubits: restoring this order now:

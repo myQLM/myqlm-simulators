@@ -16,7 +16,8 @@ from qat.comm.hardware.ttypes import HardwareSpecs
 from qat.comm.exceptions.ttypes import ErrorType, QPUException
 from qat.comm.datamodel.ttypes import ComplexNumber, OpType
 from qat.core.qpu import QPUHandler
-from qat.core.wrappers.result import aggregate_data
+from qat.core.wrappers.result import aggregate_data, Result as wResult
+from qat.core.wrappers.res_data import ResData
 from qat.core.wrappers import Circuit as WCircuit
 from .simulator import simulate, measure, compute_observable_average
 
@@ -63,7 +64,7 @@ class PyLinalg(QPUHandler):
         if not job.amp_threshold:
             job.amp_threshold = 0.0
 
-        result = Result()
+        result = wResult()
         result.raw_data = []
         if job.type == ProcessingType.SAMPLE:  # Sampling
             if job.nbshots == 0:  # Returning the full state/distribution
@@ -87,6 +88,16 @@ class PyLinalg(QPUHandler):
                     np_state_vec = np_state_vec.swapaxes(target, cur)
                     svec_inds[target], svec_inds[cur] =  svec_inds[cur], svec_inds[target]
 
+                if not has_int_meas:
+
+                    result.statevector = np_state_vec.ravel()
+                    result.has_statevector = True
+
+                    result.data = ResData(data_type = 1 if all_qubits else 0)
+
+                    return result
+
+                # with intermediate measurements: old way.
                 # loop over states. val is amp if all_qubits else prob
                 for int_state, val in enumerate(np_state_vec.ravel()):
                     amplitude = None  # in case not all qubits
@@ -135,6 +146,16 @@ class PyLinalg(QPUHandler):
 
                     interm_meas_list = [[] for _ in range(job.nbshots)]
 
+#                   BEGIN FUTURE:
+#                    result.statevector = np.array([c[0] for c in intprob_list])
+#                    result.has_statevector = True
+#                    result.data = ResData(data_type = 6)
+#                   END FUTURE
+
+                    if job.aggregate_data:
+                        result = aggregate_data(result)
+
+                    return result
                 # convert to good format and put in container.
                 for k, intprob in enumerate(intprob_list):
 

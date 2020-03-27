@@ -91,6 +91,9 @@ class PyLinalg(QPUHandler):
                 if not has_int_meas:
 
                     result.statevector = np_state_vec.ravel()
+                    # not the same threshold if working on amplitudes or probabilities
+                    threshold = job.amp_threshold if all_qubits else job.amp_threshold**2
+                    result.statevector[result.statevector < threshold] = 0
                     result.has_statevector = True
 
                     result.data = ResData(data_type = 1 if all_qubits else 0)

@@ -11,12 +11,12 @@
 import inspect
 import numpy as np
 
-from qat.comm.shared.ttypes import Sample, Result, ProcessingType
+from qat.comm.shared.ttypes import ProcessingType
 from qat.comm.hardware.ttypes import HardwareSpecs
 from qat.comm.exceptions.ttypes import ErrorType, QPUException
 from qat.comm.datamodel.ttypes import ComplexNumber, OpType
 from qat.core.qpu import QPUHandler
-from qat.core.wrappers.result import aggregate_data
+from qat.core.wrappers.result import Sample, Result, aggregate_data
 from qat.core.wrappers import Circuit as WCircuit
 from .simulator import simulate, measure, compute_observable_average
 
@@ -64,6 +64,7 @@ class PyLinalg(QPUHandler):
             job.amp_threshold = 0.0
 
         result = Result()
+        result.meta_data = dict()
         result.raw_data = []
         if job.type == ProcessingType.SAMPLE:  # Sampling
             if job.nbshots == 0:  # Returning the full state/distribution

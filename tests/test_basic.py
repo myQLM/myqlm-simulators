@@ -84,8 +84,8 @@ class TestSimpleCircExec(unittest.TestCase):
         self.assertEqual(len(result.raw_data),2)
 
         self.assertAlmostEqual(result.raw_data[0].probability, 0.5)
-        self.assertTrue(result.raw_data[0].state in [0,3])
-        self.assertTrue(result.raw_data[1].state in [0,3])
+        self.assertTrue(result.raw_data[0].state.int in [0,3])
+        self.assertTrue(result.raw_data[1].state.int in [0,3])
 
     def test_normal_launch_mode_subset_qb(self):
 
@@ -105,8 +105,8 @@ class TestSimpleCircExec(unittest.TestCase):
         self.assertEqual(len(result.raw_data),2)
 
         self.assertAlmostEqual(result.raw_data[0].probability, 0.5)
-        self.assertTrue(result.raw_data[0].state in [0,1])
-        self.assertTrue(result.raw_data[1].state in [0,1])
+        self.assertTrue(result.raw_data[0].state.int in [0,1])
+        self.assertTrue(result.raw_data[1].state.int in [0,1])
 
     def test_normal_launch_mode_with_nbshots(self):
 
@@ -145,7 +145,7 @@ class TestSimpleCircExec(unittest.TestCase):
 
         self.assertEqual(result.raw_data[0].probability, None) #No probability if not aggregating data
         for rd in result.raw_data:
-            self.assertTrue(rd.state in [0,1],
+            self.assertTrue(rd.state.int in [0,1],
                             msg="state= %s"%rd.state)
 
 class TestControlFlow(unittest.TestCase):

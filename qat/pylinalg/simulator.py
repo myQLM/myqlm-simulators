@@ -195,15 +195,15 @@ def project(state_vec, qubits, intprob):
     """
     all_qubits = [k for k in range(len(state_vec.shape))]  # explicit name
     state_int, prob = intprob  # result and probability there was to measure it
-    index_assignment = []  # building a nd-array indexing object.
-    for qb in all_qubits:
-        if qb in qubits:
-            val = (state_int >> qubits.index(qb)) & 1
-            index_assignment.append(1 - val)  # qb = (1 - val) -> set to 0.
-        else:
-            index_assignment.append(slice(None))  # slice(None) = ":"
+    index_assignment = [slice(None) for _ in all_qubits]  # building a nd-array indexing object.
 
-    state_vec[tuple(index_assignment)] = 0.  # actual projection
+    for qb in qubits:
+        val = (state_int >> qubits.index(qb)) & 1
+        index_assignment[qb] = 1 - val      # qb = (1 - val) -> set to 0
+
+        state_vec[tuple(index_assignment)] = 0.  # Actual projection
+        index_assignment[qb] = slice(None)
+
     state_vec /= np.sqrt(prob)               # renormalizing
     return state_vec
 

@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 """
     Licensed to the Apache Software Foundation (ASF) under one
     or more contributor license agreements.  See the NOTICE file
@@ -20,6 +22,7 @@
 import os, sys
 from setuptools import setup, find_namespace_packages
 from setuptools.command.test import test as TestCommand
+
 
 class PyTest(TestCommand):
     def initialize_options(self):

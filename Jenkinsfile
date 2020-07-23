@@ -44,6 +44,7 @@ HOST_NAME = InetAddress.getLocalHost().getHostName()
 // Expose some variables to bash and groovy functions
 env.OS = "$OS"
 env.BRANCH_NAME="$BRANCH_NAME"
+env.HOST_NAME="$HOST_NAME"
 
 // Show the parameters
 echo "\
@@ -143,19 +144,22 @@ REPO_NAME         = ${REPO_NAME}\n\
                     mv * $REPO_NAME/ 2>/dev/null  || true
                     mv .* $REPO_NAME/ 2>/dev/null || true
 
+                    ATOS_GIT_BASE_URL=ssh://bitbucketbdsfr.fsc.atos-services.net:7999/brq
+                    if [[ $HOST_NAME =~ qlmci2 ]]; then
+                        ATOS_GIT_BASE_URL=ssh://qlmjenkins@qlmgit.usrnd.lan:29418/qlm
+                    fi
+
                     # Clone qat repo
-                    GIT_BASE_URL=${GIT_URL%/*}
-                    echo -e "--> Cloning qat, branch=$BRANCH_NAME  [$GIT_BASE_URL] ..."
-                    cmd="git clone --single-branch --branch $BRANCH_NAME $GIT_BASE_URL/qat"
+                    echo -e "--> Cloning qat, branch=$BRANCH_NAME  [$ATOS_GIT_BASE_URL] ..."
+                    cmd="git clone --single-branch --branch $BRANCH_NAME $ATOS_GIT_BASE_URL/qat"
                     echo "> $cmd"
                     eval $cmd
 
-                    # Clone cross-compilation repo for myQLM
-                    GIT_BASE_URL=${GIT_URL%/*}
-                    echo -e "--> Cloning cross-compilation, branch=$BRANCH_NAME  [$GIT_BASE_URL] ..."
-                    cmd="git clone --single-branch --branch $BRANCH_NAME $GIT_BASE_URL/cross-compilation"
-                    echo "> $cmd"
-                    eval $cmd
+                    # Clone cross-compilation repo
+                    #echo -e "--> Cloning cross-compilation, branch=$BRANCH_NAME  [$ATOS_GIT_BASE_URL] ..."
+                    #cmd="git clone --single-branch --branch $BRANCH_NAME $ATOS_GIT_BASE_URL/cross-compilation"
+                    #echo "> $cmd"
+                    #eval $cmd
                 '''
             }
         } // Init

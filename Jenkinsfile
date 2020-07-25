@@ -70,6 +70,30 @@ properties([
     buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '25')), 
     disableConcurrentBuilds(), 
     pipelineTriggers([pollSCM('')]),
+    parameters([
+        buildSelector(defaultSelector: lastSuccessful(stable: true), description: '', name: 'UI_RESTORE_ARTIFACT'),
+        [$class: 'ChoiceParameter', choiceType: 'PT_CHECKBOX', description: '', filterLength: 1, filterable: false, name: 'UI_SKIP_TESTS', randomName: 'choice-parameter-1783699282894047',
+            script: [
+                $class: 'GroovyScript',
+                fallbackScript: [
+                    classpath: [],
+                    sandbox: false,
+                    script: ' '
+                ],
+                script: [
+                    classpath: [],
+                    sandbox: false,
+                    script: '''
+                        def user = hudson.model.User.current()
+                        if ("$user" == "Jenkins")
+                           return [\':selected\']
+                        else
+                           return [\':disabled\']
+                    '''
+                ]
+            ]
+        ]
+    ])
 ])
 
 
@@ -211,6 +235,60 @@ REPO_NAME         = ${REPO_NAME}\n\
         } // Install
 
 
+        stage('Tests-dependencies') 
+        {
+            when {
+                not {
+                    allOf {
+                        equals expected:"true", actual: UI_SKIP_TESTS;
+                        anyOf {
+                            equals expected:"Jenkins", actual: BUILD_CAUSE_NAME;
+                            equals expected:"null", actual: BUILD_CAUSE_NAME
+                        }
+                    }
+                }
+            }
+
+            steps {
+                echo "${MAGENTA}${BOLD}[TESTS-DEPENDENCIES]${RESET}"
+                script {
+                    restore_dependencies_install_dir()
+                }
+            }
+        } // Tests-dependencies
+
+
+        stage('Tests')
+        {
+            when {
+                not {
+                    allOf {
+                        equals expected:"true", actual: UI_SKIP_TESTS;
+                        anyOf {
+                            equals expected:"Jenkins", actual: BUILD_CAUSE_NAME;
+                            equals expected:"null", actual: BUILD_CAUSE_NAME
+                        }
+                    }
+                }
+            }
+
+            steps {
+                echo "${MAGENTA}${BOLD}[TESTS]${RESET}"
+                script {
+                    catchError(buildResult: 'UNSTABLE', stageResult: 'UNSTABLE') {
+                        sh '''set +x
+                            source /usr/local/bin/qatenv
+                            cd $REPO_NAME/tests
+                            cmd="python3 -m pytest -v ."
+                            echo -e "\n> $cmd"
+                            $cmd
+                        '''
+                    }
+                }
+            }
+        } // Tests
+
+
         stage("WHEEL")
         {
             steps {
@@ -261,4 +339,49 @@ REPO_NAME         = ${REPO_NAME}\n\
         } // always
     } // post
 } // pipeline
+
+
+// ---------------------------------------------------------------------------
+//
+// GROOVY FUNCTIONS
+//
+// ---------------------------------------------------------------------------
+// Restore under $RUNTIME_DIR, the tarball containing $INSTALL_DIR of each
+// dependency of this project depending on the stage we are in (build|test)
+def restore_dependencies_install_dir() {
+    def ARTIFACT_PROJECT_BRANCH = "/$BRANCH_NAME"
+    if (JOB_BASE_NAME.contains(JOB_NAME)) {
+        ARTIFACT_PROJECT_BRANCH=""
+    }
+    DEPENDENCIES = sh returnStdout: true, script: '''set +x
+        echo -n "$($QATDIR/bin/get_dependencies.sh $STAGE_NAME $REPO_NAME tarballs_artifacts)"
+    '''
+
+    if (DEPENDENCIES?.trim()) {
+        def filedeps = DEPENDENCIES
+        if (!filedeps.isEmpty()) {
+            filedeps.split('\n').each {
+                if ((!it.isEmpty())) {
+                    try {
+                        env.REPO_DEPENDENT_NAME="${it}"
+                        if (UI_RESTORE_ARTIFACT) {
+                            copyArtifacts(filter: "${it}-*.tar.gz", projectName: "${it}.${OS}${ARTIFACT_PROJECT_BRANCH}", target: "tarballs_artifacts", fingerprintArtifacts: true, selector: buildParameter("$UI_RESTORE_ARTIFACT"))
+                        } else {
+                            copyArtifacts(filter: "${it}-*.tar.gz", projectName: "${it}.${OS}${ARTIFACT_PROJECT_BRANCH}", target: "tarballs_artifacts", fingerprintArtifacts: true)
+                        }
+                    } catch (error) {
+                        echo "**** copyArtifacts: $error"
+                        sh 'exit 1'
+                    }
+                    sh '''set +x
+                        ls tarballs_artifacts/$REPO_DEPENDENT_NAME-*.tar.gz
+                        mkdir -p $RUNTIME_DIR
+                        tar xfz tarballs_artifacts/$REPO_DEPENDENT_NAME-*.tar.gz -C $RUNTIME_DIR
+                        touch tarballs_artifacts/.$REPO_DEPENDENT_NAME.artifact
+                    '''
+                }
+            }
+        }
+    }
+}
 

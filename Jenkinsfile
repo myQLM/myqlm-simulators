@@ -5,59 +5,56 @@
 // GROOVY GLOBALS
 //
 // ---------------------------------------------------------------------------
-def QLM_VERSION = "1.1.0"
+def QLM_VERSION_FOR_DOCKER_IMAGE = "1.1.0"
 
-// JOB_NAME:  qat-bdd.el8 | qat-bdd.el8/master
-// BRANCH_NAME:   master  | rc
-// OS:                el7 | el8
-// OSVERSION:         7.8 | 8.2
-// OSLABEL:       rhel7.8 | rhel8.2
-// JOB_TYPE:      mono    | multi
+//def REFERENCE_DOCKER = "yes"
+def REFERENCE_DOCKER = "no"
+
 def OS
-def OSVERSION
+def LABEL
 def OSLABEL
 def JOB_TYPE
 def DOCKER_IMAGE
 
-OS = "${JOB_NAME}".tokenize('.')[1].tokenize('/')[0]
-if ("$OS".contains("el7")) {
-    OSVERSION = "7.8"
-    LABEL = "master"
-} else if ("$OS".contains("el8")) {
-    OSVERSION = "8.2"
-    LABEL = "master"
-}
-OSLABEL  = "rhel$OSVERSION"
-JOB_TYPE = "multibranch"
+LABEL = "master"
 
+try {
+    if ("$UI_OSVERSION".startsWith("7"))
+        OS = "el7"
+    else if ("$UI_OSVERSION".startsWith("8"))
+        OS = "el8"
+} catch (e) {
+    echo "***** UI_OSVERSION undefined; setting it to 8.2 *****"
+    UI_OSVERSION = 8.2
+    OS = "el8"
+}
+
+OSLABEL  = "rhel$UI_OSVERSION"
 if (!env.BRANCH_NAME) {
-    BRANCH_NAME = "master"
-    JOB_TYPE    = "monobranch"
+    env.BRANCH_NAME = "master"
 }
-if ("$BRANCH_NAME".contains("rc")) {
-    DOCKER_IMAGE = "qlm-reference-${QLM_VERSION}-${OSLABEL}:latest"
-} else {
-    DOCKER_IMAGE = "qlm-devel-${QLM_VERSION}-${OSLABEL}:latest"
-}
+
+if ("$REFERENCE_DOCKER".contains("yes"))
+    DOCKER_IMAGE = "qlm-reference-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL}:latest"
+else
+    DOCKER_IMAGE = "qlm-devel-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL}:latest"
+
 HOST_NAME = InetAddress.getLocalHost().getHostName()
 
-// Expose some variables to bash and groovy functions
+// Expose OS to bash and groovy functions
 env.OS = "$OS"
-env.BRANCH_NAME="$BRANCH_NAME"
-env.HOST_NAME="$HOST_NAME"
+env.HOST_NAME = "$HOST_NAME"
 
 // Show the parameters
 echo "\
 JOB_NAME     = ${JOB_NAME}\n\
 BRANCH_NAME  = ${BRANCH_NAME}\n\
 JOB_BASE_NAME= ${JOB_BASE_NAME}\n\
-JOB_TYPE     = ${JOB_TYPE}\n\
+UI_OSVERSION = ${UI_OSVERSION}\n\
 OS           = ${OS}\n\
-OSVERSION    = ${OSVERSION}\n\
 OSLABEL      = ${OSLABEL}\n\
-HOST_NAME    = ${HOST_NAME}\n\
 DOCKER_IMAGE = ${DOCKER_IMAGE}\n\
-"
+HOST_NAME    = ${HOST_NAME}"
 
 
 // ---------------------------------------------------------------------------
@@ -66,13 +63,57 @@ DOCKER_IMAGE = ${DOCKER_IMAGE}\n\
 //
 // ---------------------------------------------------------------------------
 properties([
-    [$class: 'JiraProjectProperty'], 
-    buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '25')), 
-    disableConcurrentBuilds(), 
+    [$class: 'JiraProjectProperty'],
+    [$class: 'EnvInjectJobProperty',
+        info: [
+            loadFilesFromMaster: false,
+            propertiesContent: '''
+                someList=
+            ''',
+            secureGroovyScript: [
+                classpath: [],
+                sandbox: false,
+                script: ''
+            ]
+        ],
+        keepBuildVariables: true,
+        keepJenkinsSystemVariables: true,
+        on: true
+    ],
+    buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '25')),
+    disableConcurrentBuilds(),
     pipelineTriggers([pollSCM('')]),
     parameters([
-        buildSelector(defaultSelector: lastSuccessful(stable: true), description: '', name: 'UI_RESTORE_ARTIFACT'),
-        [$class: 'ChoiceParameter', choiceType: 'PT_CHECKBOX', description: '', filterLength: 1, filterable: false, name: 'UI_SKIP_TESTS', randomName: 'choice-parameter-1783699282894047',
+        [$class: 'ChoiceParameter', choiceType: 'PT_SINGLE_SELECT', description: '', filterLength: 1, filterable: false, name: 'UI_VERSION', randomName: 'choice-parameter-266216487624195',
+            script: [
+                $class: 'ScriptlerScript',
+                parameters: [
+                    [$class: 'org.biouno.unochoice.model.ScriptlerScriptParameter', name: 'job_name',    value: "${JOB_NAME}"],
+                    [$class: 'org.biouno.unochoice.model.ScriptlerScriptParameter', name: 'host_name',   value: "${HOST_NAME}"],
+                    [$class: 'org.biouno.unochoice.model.ScriptlerScriptParameter', name: 'branch_name', value: "${BRANCH_NAME}"]
+                ],
+                scriptlerScriptId: 'ReturnNextVersions.groovy'
+            ]
+        ],
+        [$class: 'ChoiceParameter', choiceType: 'PT_RADIO', description: '', filterLength: 1, filterable: false, name: 'UI_OSVERSION', randomName: 'choice-parameter-744322351209535',
+            script: [
+                $class: 'GroovyScript',
+                fallbackScript: [
+                    classpath: [],
+                    sandbox: false,
+                    script: ' '
+                ],
+                script: [
+                    classpath: [],
+                    sandbox: false,
+                    script: '''
+                        return ['7.8:disabled', '8.2:selected']
+                    '''
+                ]
+            ]
+        ],
+        [$class: 'CascadeChoiceParameter', choiceType: 'PT_RADIO', description: '', filterLength: 1, filterable: false, name: 'UI_TESTS', randomName: 'choice-parameter-851409291728428',
+            referencedParameters: 'UI_OSVERSION,BRANCH_NAME',
             script: [
                 $class: 'GroovyScript',
                 fallbackScript: [
@@ -86,13 +127,14 @@ properties([
                     script: '''
                         def user = hudson.model.User.current()
                         if ("$user" == "Jenkins")
-                           return [\':selected\']
+                            return ['Run tests', 'Skip tests:selected']
                         else
-                           return [\':disabled\']
+                            return ['Run tests:selected', 'Skip tests:disabled']
                     '''
                 ]
             ]
         ]
+
     ])
 ])
 
@@ -141,7 +183,12 @@ pipeline
         BUILD_CAUSE_NAME =  currentBuild.getBuildCauses()[0].userName.toString()
 
         REPO_NAME = sh returnStdout: true, script: '''set +x
-            echo -n ${JOB_NAME%%.*}
+            JOB_NAME=${JOB_NAME%%/*}
+            if [[ $JOB_NAME =~ ^qat-.*-.*$ ]]; then
+                echo -n ${JOB_NAME%-*}
+            else
+                echo -n $JOB_NAME
+            fi
         '''
     } 
 
@@ -185,8 +232,18 @@ REPO_NAME         = ${REPO_NAME}\n\
                     #echo "> $cmd"
                     #eval $cmd
                 '''
+                script {
+                    // Load groovy support functions
+                    print "Loading groovy support functions ..."
+                    support_functions = load "${QATDIR}/bin/jenkins_support_functions.groovy"
+
+                    // Set a few badges for the build
+                    print "Setting up badges ..."
+                    support_functions.badges()
+                }
             }
         } // Init
+
 
         stage('Versioning')
         {
@@ -226,33 +283,24 @@ REPO_NAME         = ${REPO_NAME}\n\
                         $cmd
 
                         # Save the artifact(s)
-                        echo -e "\nCreating ${REPO_NAME}-${MYQLM_VERSION}.${BUILD_NUMBER}.tar.gz"
-                        cd $INSTALL_DIR && tar cfz $WORKSPACE/${REPO_NAME}-${MYQLM_VERSION}.${BUILD_NUMBER}.tar.gz .
+                        echo -e "\nCreating ${REPO_NAME}-${MYQLM_VERSION}.${BUILD_NUMBER}.${OS}.tar.gz"
+                        cd $INSTALL_DIR && tar cfz $WORKSPACE/${REPO_NAME}-${MYQLM_VERSION}.${BUILD_NUMBER}.${OS}.tar.gz .
                     '''
-                    archiveArtifacts artifacts: "${REPO_NAME}-${MYQLM_VERSION}.${BUILD_NUMBER}.tar.gz", onlyIfSuccessful: true
+                    archiveArtifacts artifacts: "${REPO_NAME}-${MYQLM_VERSION}.${BUILD_NUMBER}.${OS}.tar.gz", onlyIfSuccessful: true
                 }
             }
         } // Install
 
 
-        stage('Tests-dependencies') 
+        stage('Tests-dependencies')
         {
             when {
-                not {
-                    allOf {
-                        equals expected:"true", actual: UI_SKIP_TESTS;
-                        anyOf {
-                            equals expected:"Jenkins", actual: BUILD_CAUSE_NAME;
-                            equals expected:"null", actual: BUILD_CAUSE_NAME
-                        }
-                    }
-                }
+                expression { if (env.UI_TESTS.toLowerCase().contains("skip")) { return false } else { return true } }
             }
-
             steps {
                 echo "${MAGENTA}${BOLD}[TESTS-DEPENDENCIES]${RESET}"
                 script {
-                    restore_dependencies_install_dir()
+                    support_functions.restore_dependencies_install_dir()
                 }
             }
         } // Tests-dependencies
@@ -261,29 +309,34 @@ REPO_NAME         = ${REPO_NAME}\n\
         stage('Tests')
         {
             when {
-                not {
-                    allOf {
-                        equals expected:"true", actual: UI_SKIP_TESTS;
-                        anyOf {
-                            equals expected:"Jenkins", actual: BUILD_CAUSE_NAME;
-                            equals expected:"null", actual: BUILD_CAUSE_NAME
-                        }
-                    }
-                }
+                expression { if (env.UI_TESTS.toLowerCase().contains("skip")) { return false } else { return true } }
             }
-
+            environment {
+                INSTALL_DIR                 = "$WORKSPACE/install"
+                TESTS_REPORTS_DIR           = "$REPO_NAME/tests/reports"
+                TESTS_REPORTS_DIR_JUNIT     = "$TESTS_REPORTS_DIR/junit"
+                TESTS_REPORTS_DIR_GTEST     = "$TESTS_REPORTS_DIR/gtest"
+                TESTS_REPORTS_DIR_CUNIT     = "$TESTS_REPORTS_DIR/cunit"
+                GTEST_OUTPUT                = "xml:$WORKSPACE/$TESTS_REPORTS_DIR_GTEST/"
+                TESTS_REPORTS_DIR_COVERAGE  = "$TESTS_REPORTS_DIR/coverage"
+                TESTS_REPORTS_DIR_VALGRIND  = "$TESTS_REPORTS_DIR/valgrind"
+                VALGRIND_ARGS               = "--fair-sched=no --child-silent-after-fork=yes --tool=memcheck --xml=yes --xml-file=$WORKSPACE/$TESTS_REPORTS_DIR_VALGRIND/report.xml --leak-check=full --show-leak-kinds=all --show-reachable=no --track-origins=yes --run-libc-freeres=no --gen-suppressions=all --suppressions=$QATDIR/share/misc/valgrind.supp"
+            }
             steps {
                 echo "${MAGENTA}${BOLD}[TESTS]${RESET}"
                 script {
                     catchError(buildResult: 'UNSTABLE', stageResult: 'UNSTABLE') {
                         sh '''set +x
                             source /usr/local/bin/qatenv
+                            cp qat/share/misc/pytest.ini $REPO_NAME/tests 2>/dev/null
+                            mkdir -p $WORKSPACE/$TESTS_REPORTS_DIR_JUNIT
                             cd $REPO_NAME/tests
-                            cmd="python3 -m pytest -v ."
+                            cmd="python3 -m pytest -v --junitxml=reports/junit/report.xml ."
                             echo -e "\n> $cmd"
                             $cmd
                         '''
                     }
+                    support_functions.tests_reporting()
                 }
             }
         } // Tests
@@ -310,7 +363,6 @@ REPO_NAME         = ${REPO_NAME}\n\
                         find dist -type f -exec unzip -p {} ${REPO_NAME//-/_}-$MYQLM_VERSION.dist-info/METADATA \\;
                     '''
                     // Save the source tarball and wheel artifacts
-                    archiveArtifacts artifacts: "${REPO_NAME}-${MYQLM_VERSION}.${BUILD_NUMBER}.tar.gz", onlyIfSuccessful: true
                     archiveArtifacts artifacts: "${REPO_NAME}/dist/*.whl", onlyIfSuccessful: true
                 }
             }
@@ -332,56 +384,10 @@ REPO_NAME         = ${REPO_NAME}\n\
                     emailext body:
                         "${BUILD_URL}",
                         recipientProviders: [[$class:'CulpritsRecipientProvider'],[$class:'RequesterRecipientProvider']],
-                        subject: "${BUILD_TAG} - ${currentBuild.result}",
-                        bcc: 'jerome.pioux@atos.net'
+                        subject: "${BUILD_TAG} - ${currentBuild.result}"
                 }
             }
         } // always
     } // post
 } // pipeline
-
-
-// ---------------------------------------------------------------------------
-//
-// GROOVY FUNCTIONS
-//
-// ---------------------------------------------------------------------------
-// Restore under $RUNTIME_DIR, the tarball containing $INSTALL_DIR of each
-// dependency of this project depending on the stage we are in (build|test)
-def restore_dependencies_install_dir() {
-    def ARTIFACT_PROJECT_BRANCH = "/$BRANCH_NAME"
-    if (JOB_BASE_NAME.contains(JOB_NAME)) {
-        ARTIFACT_PROJECT_BRANCH=""
-    }
-    DEPENDENCIES = sh returnStdout: true, script: '''set +x
-        echo -n "$($QATDIR/bin/get_dependencies.sh $STAGE_NAME $REPO_NAME tarballs_artifacts)"
-    '''
-
-    if (DEPENDENCIES?.trim()) {
-        def filedeps = DEPENDENCIES
-        if (!filedeps.isEmpty()) {
-            filedeps.split('\n').each {
-                if ((!it.isEmpty())) {
-                    try {
-                        env.REPO_DEPENDENT_NAME="${it}"
-                        if (UI_RESTORE_ARTIFACT) {
-                            copyArtifacts(filter: "${it}-*.tar.gz", projectName: "${it}.${OS}${ARTIFACT_PROJECT_BRANCH}", target: "tarballs_artifacts", fingerprintArtifacts: true, selector: buildParameter("$UI_RESTORE_ARTIFACT"))
-                        } else {
-                            copyArtifacts(filter: "${it}-*.tar.gz", projectName: "${it}.${OS}${ARTIFACT_PROJECT_BRANCH}", target: "tarballs_artifacts", fingerprintArtifacts: true)
-                        }
-                    } catch (error) {
-                        echo "**** copyArtifacts: $error"
-                        sh 'exit 1'
-                    }
-                    sh '''set +x
-                        ls tarballs_artifacts/$REPO_DEPENDENT_NAME-*.tar.gz
-                        mkdir -p $RUNTIME_DIR
-                        tar xfz tarballs_artifacts/$REPO_DEPENDENT_NAME-*.tar.gz -C $RUNTIME_DIR
-                        touch tarballs_artifacts/.$REPO_DEPENDENT_NAME.artifact
-                    '''
-                }
-            }
-        }
-    }
-}
 

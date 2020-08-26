@@ -226,11 +226,8 @@ REPO_NAME         = ${REPO_NAME}\n\
                     echo "> $cmd"
                     eval $cmd
 
-                    # Clone cross-compilation repo
-                    #echo -e "--> Cloning cross-compilation, branch=$BRANCH_NAME  [$ATOS_GIT_BASE_URL] ..."
-                    #cmd="git clone --single-branch --branch $BRANCH_NAME $ATOS_GIT_BASE_URL/cross-compilation"
-                    #echo "> $cmd"
-                    #eval $cmd
+                    # Install wheels dependencies
+                    sudo pip3 install -r $WORKSPACE/qat/share/misc/myqlm-interop-requirements.txt
                 '''
                 script {
                     // Load groovy support functions

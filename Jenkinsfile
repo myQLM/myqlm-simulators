@@ -107,7 +107,7 @@ properties([
                     classpath: [],
                     sandbox: false,
                     script: '''
-                        return ['7.8:disabled', '8.2:selected']
+                        return ['7.8', '8.2:selected']
                     '''
                 ]
             ]

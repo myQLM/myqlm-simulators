@@ -227,7 +227,9 @@ REPO_NAME         = ${REPO_NAME}\n\
                     eval $cmd
 
                     # Install wheels dependencies
-                    sudo pip3 install -r $WORKSPACE/qat/share/misc/myqlm-interop-requirements.txt
+                    if [[ $REPO_NAME = myqlm-interop ]]; then
+                        sudo pip3 install -r $WORKSPACE/qat/share/misc/myqlm-interop-requirements.txt || true
+                    fi
                 '''
                 script {
                     // Load groovy support functions

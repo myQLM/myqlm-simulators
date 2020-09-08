@@ -1,31 +1,18 @@
 Python Linalg
 ===============
 
+This package contains a simple numpy-based simulator for quantum circuits, ``PyLinalg``.
 
-A simple numpy based simulator for the QLM platform.
 
-
-installation
+Installation
 ----------------
 
-It is good practice to install packages inside a virtualenv:
+You can use pip to install this package:
+```bash
+pip install myqlm-simulators
+```
 
-Create a fresh virtual env:
-
-$ virtualenv qlm_env
-
-Activate the environment:
-
-$ source ./qlm_env/bin/activate
-
-Finally install the package:
-
-$ python3 setup.py install
-
-Running tests
+Documentation
 -------------------
 
-You might want to run pylinalg's test to check that everything is correctly installed.
-This command will install pytest and run the tests:
-
-$ python3 setup.py test
+Check out [the online documentation](https://myqlm.github.io/myqlm_specific/qat-pylinalg.html).

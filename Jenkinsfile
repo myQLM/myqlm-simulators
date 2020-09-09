@@ -107,7 +107,7 @@ properties([
                     classpath: [],
                     sandbox: false,
                     script: '''
-                        return ['7.8:disabled', '8.2:selected']
+                        return ['7.8', '8.2:selected']
                     '''
                 ]
             ]
@@ -227,7 +227,9 @@ REPO_NAME         = ${REPO_NAME}\n\
                     eval $cmd
 
                     # Install wheels dependencies
-                    sudo pip3 install -r $WORKSPACE/qat/share/misc/myqlm-interop-requirements.txt
+                    if [[ $REPO_NAME = myqlm-interop ]]; then
+                        sudo pip3 install -r $WORKSPACE/qat/share/misc/myqlm-interop-requirements.txt || true
+                    fi
                 '''
                 script {
                     // Load groovy support functions
@@ -248,10 +250,10 @@ REPO_NAME         = ${REPO_NAME}\n\
                 echo "${MAGENTA}${BOLD}[VERSIONING]${RESET}"
                 script {
                     MYQLM_VERSION = sh returnStdout: true, script: '''set +x
-                        if [[ -r qat/share/versions/myqlm.version ]]; then
-                            MYQLM_VERSION="$(cat qat/share/versions/myqlm.version)"
+                        if [[ -r qat/share/versions/$REPO_NAME.version ]]; then
+                            MYQLM_VERSION="$(cat qat/share/versions/$REPO_NAME.version)"
                         else
-                            echo -e "\n**** No qat/share/versions/myqlm.version file"
+                            echo -e "\n**** No qat/share/versions/$REPO_NAME.version file"
                             exit 1
                         fi
                         echo -n $MYQLM_VERSION

@@ -112,6 +112,15 @@ properties([
                 ]
             ]
         ],
+        [$class: 'ChoiceParameter', choiceType: 'PT_RADIO', description: '', filterLength: 1, filterable: false, name: 'UI_PRODUCT', randomName: 'choice-parameter-2765756439171963',
+            script: [
+                $class: 'ScriptlerScript',
+                parameters: [
+                    [$class: 'org.biouno.unochoice.model.ScriptlerScriptParameter', name: 'job_name', value: "${JOB_NAME}"]
+                ],
+                scriptlerScriptId: 'selectProductsToBuild.groovy'
+            ]
+        ],
         [$class: 'CascadeChoiceParameter', choiceType: 'PT_RADIO', description: '', filterLength: 1, filterable: false, name: 'UI_TESTS', randomName: 'choice-parameter-851409291728428',
             referencedParameters: 'UI_OSVERSION,BRANCH_NAME',
             script: [
@@ -125,11 +134,7 @@ properties([
                     classpath: [],
                     sandbox: false,
                     script: '''
-                        def user = hudson.model.User.current()
-                        if ("$user" == "Jenkins")
-                            return ['Run tests', 'Skip tests:selected']
-                        else
-                            return ['Run tests:selected', 'Skip tests:disabled']
+                        return ['Run tests:selected', 'Skip tests']
                     '''
                 ]
             ]
@@ -149,7 +154,7 @@ pipeline
     agent {
         docker {
             label "${LABEL}"
-            image "${DOCKER_IMAGE}"
+            image "qlm-devel-${QLM_VERSION_FOR_DOCKER_IMAGE}-rhel8.2:latest"
             args '-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /opt/qlmtools:/opt/qlmtools -v /var/www/repos:/var/www/repos'
             alwaysPull false
         }
@@ -190,6 +195,10 @@ pipeline
                 echo -n $JOB_NAME
             fi
         '''
+
+        CURRENT_OS        = "el8"
+        CURRENT_PLATFORM  = "linux"
+        DEPENDENCIES_OS   = "$OS"
     } 
 
 
@@ -228,17 +237,22 @@ REPO_NAME         = ${REPO_NAME}\n\
 
                     # Install wheels dependencies
                     if [[ $REPO_NAME = myqlm-interop ]]; then
+                        sudo python3 -m pip install --upgrade pip
                         sudo pip3 install -r $WORKSPACE/qat/share/misc/myqlm-interop-requirements.txt || true
                     fi
                 '''
                 script {
-                    // Load groovy support functions
-                    print "Loading groovy support functions ..."
-                    support_functions = load "${QATDIR}/bin/jenkins_support_functions.groovy"
+                    print "Loading groovy functions ..."
+                    support_methods         = load "${QATDIR}/jenkins_methods/support"
+                    build_methods           = load "${QATDIR}/jenkins_methods/build"
+                    install_methods         = load "${QATDIR}/jenkins_methods/install"
+                    static_analysis_methods = load "${QATDIR}/jenkins_methods/static_analysis"
+                    test_methods            = load "${QATDIR}/jenkins_methods/tests"
+                    packaging_methods       = load "${QATDIR}/jenkins_methods/packaging"
 
                     // Set a few badges for the build
                     print "Setting up badges ..."
-                    support_functions.badges()
+                    support_methods.badges()
                 }
             }
         } // Init
@@ -249,22 +263,53 @@ REPO_NAME         = ${REPO_NAME}\n\
             steps {
                 echo "${MAGENTA}${BOLD}[VERSIONING]${RESET}"
                 script {
-                    MYQLM_VERSION = sh returnStdout: true, script: '''set +x
-                        if [[ -r qat/share/versions/$REPO_NAME.version ]]; then
-                            MYQLM_VERSION="$(cat qat/share/versions/$REPO_NAME.version)"
+                    VERSION = sh returnStdout: true, script: '''set +x
+                        if [[ -n $UI_VERSION ]]; then
+                            VERSION="$UI_VERSION"
                         else
-                            echo -e "\n**** No qat/share/versions/$REPO_NAME.version file"
-                            exit 1
+                            # UI_VERSION can be null from curl command
+                            if [[ -r qat/share/versions/$REPO_NAME.version ]]; then
+                                VERSION="$(cat qat/share/versions/$REPO_NAME.version)"
+                            else
+                                echo -e "\n**** No qat/share/versions/$REPO_NAME.version file"
+                                exit 1
+                            fi
                         fi
-                        echo -n $MYQLM_VERSION
+                        if [[ $BRANCH_NAME != rc ]]; then
+                            VERSION=${VERSION}.${BUILD_NUMBER}
+                        fi
+                        echo -n $VERSION
                     '''
-                    env.MYQLM_VERSION="$MYQLM_VERSION"
-                    echo "(wheel) -> ${MYQLM_VERSION}"
+                    env.VERSION="$VERSION"
+                    echo "(wheel) -> ${VERSION}"
+
+                    sh '''set +x
+                        sed -i "s/version=.*/version=\\"$VERSION\\",/" $WORKSPACE/$REPO_NAME/setup.py
+                    '''
+
+                    // Commit the new version
+                    sh '''set +x
+                        # Commit a change in versioning if any
+                        # Note: Use of qlmjenkins will not trigger a new build on commit
+                        cd $WORKSPACE/qat/share/versions
+                        committer_name=$(git log --format="%an" | head -1)
+                        git config --local user.name  "qlmjenkins"
+                        git config --local user.email "atos@noreply.com"
+                        if [[ -n $UI_VERSION && $(cat $REPO_NAME.version 2>/dev/null) != $UI_VERSION ]]; then
+                            echo -e "\n${CYAN}--> Committing version...${RESET}"
+                            echo -n "$UI_VERSION" >$REPO_NAME.version
+                            git remote -v
+                            git add $REPO_NAME.version
+                            if git commit -m "Version change [$REPO_NAME,$UI_VERSION,$committer_name]"; then
+                                git pull origin $BRANCH_NAME
+                                if git push origin HEAD:$BRANCH_NAME; then
+                                    echo -e "\nThe new version [$UI_VERSION] has been pushed"
+                                fi
+                            fi
+                        fi
+                    '''
                 }
-                sh '''set +x
-                    sed -i "s/version=.*/version=\\"$MYQLM_VERSION\\",/" $WORKSPACE/$REPO_NAME/setup.py
-                '''
-                buildName "${MYQLM_VERSION}.${BUILD_NUMBER}"
+                buildName "${VERSION}-${OS}"
             }
         } // Versioning
 
@@ -282,10 +327,10 @@ REPO_NAME         = ${REPO_NAME}\n\
                         $cmd
 
                         # Save the artifact(s)
-                        echo -e "\nCreating ${REPO_NAME}-${MYQLM_VERSION}.${BUILD_NUMBER}.${OS}.tar.gz"
-                        cd $INSTALL_DIR && tar cfz $WORKSPACE/${REPO_NAME}-${MYQLM_VERSION}.${BUILD_NUMBER}.${OS}.tar.gz .
+                        echo -e "\nCreating ${REPO_NAME}-${VERSION}-${CURRENT_PLATFORM}.${CURRENT_OS}.tar.gz"
+                        cd $INSTALL_DIR && tar cfz $WORKSPACE/${REPO_NAME}-${VERSION}-${CURRENT_PLATFORM}.${CURRENT_OS}.tar.gz .
                     '''
-                    archiveArtifacts artifacts: "${REPO_NAME}-${MYQLM_VERSION}.${BUILD_NUMBER}.${OS}.tar.gz", onlyIfSuccessful: true
+                    archiveArtifacts artifacts: "${REPO_NAME}-${VERSION}-${CURRENT_PLATFORM}.${CURRENT_OS}.tar.gz", onlyIfSuccessful: true
                 }
             }
         } // Install
@@ -299,7 +344,8 @@ REPO_NAME         = ${REPO_NAME}\n\
             steps {
                 echo "${MAGENTA}${BOLD}[TESTS-DEPENDENCIES]${RESET}"
                 script {
-                    support_functions.restore_dependencies_install_dir()
+                    env.stage = "tests"
+                    support_methods.restore_dependencies_install_dir(env.stage)
                 }
             }
         } // Tests-dependencies
@@ -335,7 +381,7 @@ REPO_NAME         = ${REPO_NAME}\n\
                             $cmd
                         '''
                     }
-                    support_functions.tests_reporting()
+                    test_methods.tests_reporting()
                 }
             }
         } // Tests
@@ -359,7 +405,7 @@ REPO_NAME         = ${REPO_NAME}\n\
                         find dist -type f -exec echo -e "$BLUE"{}"${RESET}" \\; -exec unzip -l {} \\;
     
                         echo -e "\n\n${MAGENTA}METADATA file${RESET}"
-                        find dist -type f -exec unzip -p {} ${REPO_NAME//-/_}-$MYQLM_VERSION.dist-info/METADATA \\;
+                        find dist -type f -exec unzip -p {} ${REPO_NAME//-/_}-$VERSION.dist-info/METADATA \\;
                     '''
                     // Save the source tarball and wheel artifacts
                     archiveArtifacts artifacts: "${REPO_NAME}/dist/*.whl", onlyIfSuccessful: true

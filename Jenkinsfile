@@ -44,6 +44,7 @@ HOST_NAME = InetAddress.getLocalHost().getHostName()
 // Expose OS to bash and groovy functions
 env.OS = "$OS"
 env.HOST_NAME = "$HOST_NAME"
+env.NIGHTLY_BUILD = params.NIGHTLY_BUILD
 
 // Show the parameters
 echo "\
@@ -196,6 +197,37 @@ pipeline
             fi
         '''
 
+        JOB_QUALIFIER = sh returnStdout: true, script: '''set +x
+            JOB_QUALIFIER=${JOB_NAME#*qat-}
+            JOB_QUALIFIER=${JOB_QUALIFIER#*-}
+            n=${JOB_NAME//[^-]}
+            if ((${#n} > 1)); then
+                echo -n "/${JOB_QUALIFIER%%/*}"
+            else
+                echo -n "/"
+            fi
+        '''
+
+        QUALIFIED_REPO_NAME = sh returnStdout: true, script: '''set +x
+            x=$JOB_NAME
+            if [[ $JOB_NAME =~ ^qat-.*-.*$ ]]; then
+                x=${JOB_NAME%-*}
+                if [[ $x =~ ^qat-.*-.*$ ]]; then
+                    x=${x%-*}
+                fi
+            fi
+            REPO_NAME=${x%%/*}
+            JOB_QUALIFIER=${JOB_NAME#*qat-}
+            JOB_QUALIFIER=${JOB_QUALIFIER#*-}
+            n=${JOB_NAME//[^-]}
+            if ((${#n} > 1)); then
+                JOB_QUALIFIER="${JOB_QUALIFIER%%/*}"
+                echo -n "${REPO_NAME}-${JOB_QUALIFIER}"
+            else
+                echo -n "${REPO_NAME}"
+            fi
+        '''
+
         CURRENT_OS        = "el8"
         CURRENT_PLATFORM  = "linux"
         DEPENDENCIES_OS   = "$OS"
@@ -209,14 +241,18 @@ pipeline
             steps {
                 echo "${MAGENTA}${BOLD}[INIT]${RESET}"
                 echo "\
-BASEDIR           = ${BASEDIR}\n\
-QATDIR            = ${QATDIR}\n\
-QAT_REPO_BASEDIR  = ${QAT_REPO_BASEDIR}\n\
-INSTALL_DIR       = ${INSTALL_DIR}\n\
-RUNTIME_DIR       = ${RUNTIME_DIR}\n\
-BUILD_CAUSE       = ${BUILD_CAUSE}\n\
-BUILD_CAUSE_NAME  = ${BUILD_CAUSE_NAME}\n\
-REPO_NAME         = ${REPO_NAME}\n\
+BASEDIR             = ${BASEDIR}\n\
+QATDIR              = ${QATDIR}\n\
+QAT_REPO_BASEDIR    = ${QAT_REPO_BASEDIR}\n\
+\n\
+BUILD_CAUSE         = ${BUILD_CAUSE}\n\
+BUILD_CAUSE_NAME    = ${BUILD_CAUSE_NAME}\n\
+\n\
+REPO_NAME           = ${REPO_NAME}\n\
+\n\
+JOB_QUALIFIER       = ${JOB_QUALIFIER}\n\
+QUALIFIED_REPO_NAME = ${QUALIFIED_REPO_NAME}\n\
+NIGHTLY_BUILD       = ${NIGHTLY_BUILD}\n\
 "
 
                 sh '''set +x
@@ -316,7 +352,6 @@ REPO_NAME         = ${REPO_NAME}\n\
         stage('Install')
         {
             steps {
-                echo "${MAGENTA}${BOLD}[INSTALL]${RESET}"
                 script {
                     sh '''set +x
                         source /usr/local/bin/qatenv
@@ -341,7 +376,6 @@ REPO_NAME         = ${REPO_NAME}\n\
                 expression { if (env.UI_TESTS.toLowerCase().contains("skip")) { return false } else { return true } }
             }
             steps {
-                echo "${MAGENTA}${BOLD}[TESTS-DEPENDENCIES]${RESET}"
                 script {
                     env.stage = "tests"
                     support_methods.restore_tarballs_dependencies(env.stage)

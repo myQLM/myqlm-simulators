@@ -251,7 +251,6 @@ REPO_NAME         = ${REPO_NAME}\n\
                     packaging_methods       = load "${QATDIR}/jenkins_methods/packaging"
 
                     // Set a few badges for the build
-                    print "Setting up badges ..."
                     support_methods.badges()
                 }
             }
@@ -345,7 +344,7 @@ REPO_NAME         = ${REPO_NAME}\n\
                 echo "${MAGENTA}${BOLD}[TESTS-DEPENDENCIES]${RESET}"
                 script {
                     env.stage = "tests"
-                    support_methods.restore_dependencies_install_dir(env.stage)
+                    support_methods.restore_tarballs_dependencies(env.stage)
                 }
             }
         } // Tests-dependencies

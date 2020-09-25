@@ -419,7 +419,7 @@ NIGHTLY_BUILD       = ${NIGHTLY_BUILD}\n\
         stage("BUILD-AND-INSTALL-EL8") {
             when {
                 anyOf {
-                    expression { if (UI_PRODUCT.startsWith("QLM")) { return false } else { return true } };
+                    expression { if (UI_PRODUCT.startsWith("QLM"))     { return true } else { return false } };
                     expression { if (env.UI_OSVERSION.contains("8.2")) { return true } else { return false } }
                 }
                 beforeAgent true

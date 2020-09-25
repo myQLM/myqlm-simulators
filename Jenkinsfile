@@ -10,10 +10,14 @@ def QLM_VERSION_FOR_DOCKER_IMAGE = "1.1.0"
 //def REFERENCE_DOCKER = "yes"
 def REFERENCE_DOCKER = "no"
 
+// JOB_NAME:    qat-bdd | qat-bdd/master
+// UI_OSVERSION:    7.8 | 8.2
+// OS:              el7 | el8
+// OSLABEL:     rhel7.8 | rhel8.2
+// BRANCH_NAME:  master | rc
 def OS
 def LABEL
 def OSLABEL
-def JOB_TYPE
 def DOCKER_IMAGE
 
 LABEL = "master"
@@ -39,9 +43,11 @@ if ("$REFERENCE_DOCKER".contains("yes"))
 else
     DOCKER_IMAGE = "qlm-devel-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL}:latest"
 
+DOCKER_IMAGE_el7 = "qlm-devel-${QLM_VERSION_FOR_DOCKER_IMAGE}-rhel7.8:latest"
+
 HOST_NAME = InetAddress.getLocalHost().getHostName()
 
-// Expose OS to bash and groovy functions
+// Expose variables to bash and groovy functions
 env.OS = "$OS"
 env.HOST_NAME = "$HOST_NAME"
 env.NIGHTLY_BUILD = params.NIGHTLY_BUILD
@@ -64,7 +70,7 @@ HOST_NAME    = ${HOST_NAME}"
 //
 // ---------------------------------------------------------------------------
 properties([
-    [$class: 'JiraProjectProperty'],
+    [$class: 'JiraProjectProperty'], 
     [$class: 'EnvInjectJobProperty',
         info: [
             loadFilesFromMaster: false,
@@ -81,21 +87,21 @@ properties([
         keepJenkinsSystemVariables: true,
         on: true
     ],
-    buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '25')),
-    disableConcurrentBuilds(),
+    buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '10', daysToKeepStr: '', numToKeepStr: '50')), 
+    disableConcurrentBuilds(), 
     pipelineTriggers([pollSCM('')]),
     parameters([
         [$class: 'ChoiceParameter', choiceType: 'PT_SINGLE_SELECT', description: '', filterLength: 1, filterable: false, name: 'UI_VERSION', randomName: 'choice-parameter-266216487624195',
             script: [
                 $class: 'ScriptlerScript',
-                parameters: [
+                parameters: [ 
                     [$class: 'org.biouno.unochoice.model.ScriptlerScriptParameter', name: 'job_name',    value: "${JOB_NAME}"],
                     [$class: 'org.biouno.unochoice.model.ScriptlerScriptParameter', name: 'host_name',   value: "${HOST_NAME}"],
                     [$class: 'org.biouno.unochoice.model.ScriptlerScriptParameter', name: 'branch_name', value: "${BRANCH_NAME}"]
                 ],
                 scriptlerScriptId: 'ReturnNextVersions.groovy'
             ]
-        ],
+        ], 
         [$class: 'ChoiceParameter', choiceType: 'PT_RADIO', description: '', filterLength: 1, filterable: false, name: 'UI_OSVERSION', randomName: 'choice-parameter-744322351209535',
             script: [
                 $class: 'GroovyScript',
@@ -113,7 +119,7 @@ properties([
                 ]
             ]
         ],
-        [$class: 'ChoiceParameter', choiceType: 'PT_RADIO', description: '', filterLength: 1, filterable: false, name: 'UI_PRODUCT', randomName: 'choice-parameter-2765756439171963',
+        [$class: 'ChoiceParameter', choiceType: 'PT_RADIO', description: '', filterLength: 1, filterable: false, name: 'UI_PRODUCT', randomName: 'choice-parameter-2765756439171963', 
             script: [
                 $class: 'ScriptlerScript',
                 parameters: [
@@ -122,7 +128,25 @@ properties([
                 scriptlerScriptId: 'selectProductsToBuild.groovy'
             ]
         ],
-        [$class: 'CascadeChoiceParameter', choiceType: 'PT_RADIO', description: '', filterLength: 1, filterable: false, name: 'UI_TESTS', randomName: 'choice-parameter-851409291728428',
+        [$class: 'ChoiceParameter', choiceType: 'PT_CHECKBOX', description: 'VERBOSE option for cmake', filterLength: 1, filterable: false, name: 'UI_VERBOSE', randomName: 'choice-parameter-2765756439171960', 
+            script: [
+                $class: 'GroovyScript', 
+                fallbackScript: [
+                    classpath: [],
+                    sandbox: false, 
+                    script: '''
+                    '''
+                ], 
+                script: [
+                    classpath: [],
+                    sandbox: false,
+                    script: '''
+                        return ['']
+                    '''
+                ]
+            ]
+        ],
+        [$class: 'CascadeChoiceParameter', choiceType: 'PT_RADIO', description: '', filterLength: 1, filterable: false, name: 'UI_TESTS', randomName: 'choice-parameter-851409291728428', 
             referencedParameters: 'UI_OSVERSION,BRANCH_NAME',
             script: [
                 $class: 'GroovyScript',
@@ -135,13 +159,15 @@ properties([
                     classpath: [],
                     sandbox: false,
                     script: '''
-                        return ['Run tests:selected', 'Skip tests']
+                        if ("$UI_OSVERSION".startsWith("7") || "$BRANCH_NAME".contains("rc"))
+                            return ['Run tests:selected', 'Run tests with code coverage:disabled', 'Skip tests']
+                        else
+                            return ['Run tests:selected', 'Run tests with code coverage', 'Skip tests']
                     '''
                 ]
             ]
         ]
-
-    ])
+    ]) 
 ])
 
 
@@ -152,17 +178,11 @@ properties([
 // ---------------------------------------------------------------------------
 pipeline
 {
-    agent {
-        docker {
-            label "${LABEL}"
-            image "qlm-devel-${QLM_VERSION_FOR_DOCKER_IMAGE}-rhel8.2:latest"
-            args '-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /opt/qlmtools:/opt/qlmtools -v /var/www/repos:/var/www/repos'
-            alwaysPull false
-        }
-    }
+    agent any 
 
     options {
         ansiColor('xterm')
+        timeout(time:30,unit:"MINUTES")
     }
 
     environment {
@@ -171,8 +191,6 @@ pipeline
         BASEDIR           = "$WORKSPACE"
         QATDIR            = "$BASEDIR/qat"
         QAT_REPO_BASEDIR  = "$BASEDIR"
-        INSTALL_DIR       = "$BASEDIR/install"
-        RUNTIME_DIR       = "$BASEDIR/runtime"
 
         BLACK   = '\033[30m' ; B_BLACK   = '\033[40m'
         RED     = '\033[31m' ; B_RED     = '\033[41m'
@@ -189,11 +207,32 @@ pipeline
         BUILD_CAUSE_NAME =  currentBuild.getBuildCauses()[0].userName.toString()
 
         REPO_NAME = sh returnStdout: true, script: '''set +x
-            JOB_NAME=${JOB_NAME%%/*}
             if [[ $JOB_NAME =~ ^qat-.*-.*$ ]]; then
-                echo -n ${JOB_NAME%-*}
+                JOB_NAME=${JOB_NAME%-*}
+                if [[ $JOB_NAME =~ ^qat-.*-.*$ ]]; then
+                    JOB_NAME=${JOB_NAME%-*}
+                fi
+            fi
+            echo -n ${JOB_NAME%%/*}
+        '''
+
+        BUILD_TYPE = sh returnStdout: true, script: '''set +x
+            if [[ $BRANCH_NAME = rc ]]; then
+                echo -n release
             else
-                echo -n $JOB_NAME
+                echo -n debug
+            fi
+        '''
+
+        REPO_TYPE = sh returnStdout: true, script: '''set +x
+            if [[ $NIGHTLY_BUILD = true ]]; then
+                echo -n mls
+            else 
+                if [[ $BRANCH_NAME = master ]]; then
+                    echo -n dev
+                else
+                    echo -n rc
+                fi
             fi
         '''
 
@@ -227,16 +266,12 @@ pipeline
                 echo -n "${REPO_NAME}"
             fi
         '''
-
-        CURRENT_OS        = "el8"
-        CURRENT_PLATFORM  = "linux"
-        DEPENDENCIES_OS   = "$OS"
     } 
 
 
     stages
     {
-        stage('Init')
+        stage('init')
         {
             steps {
                 echo "${MAGENTA}${BOLD}[INIT]${RESET}"
@@ -249,32 +284,35 @@ BUILD_CAUSE         = ${BUILD_CAUSE}\n\
 BUILD_CAUSE_NAME    = ${BUILD_CAUSE_NAME}\n\
 \n\
 REPO_NAME           = ${REPO_NAME}\n\
+REPO_TYPE           = ${REPO_TYPE}\n\
+BUILD_TYPE          = ${BUILD_TYPE}\n\
 \n\
 JOB_QUALIFIER       = ${JOB_QUALIFIER}\n\
 QUALIFIED_REPO_NAME = ${QUALIFIED_REPO_NAME}\n\
 NIGHTLY_BUILD       = ${NIGHTLY_BUILD}\n\
 "
-
                 sh '''set +x
                     mkdir -p $REPO_NAME
                     mv * $REPO_NAME/ 2>/dev/null  || true
                     mv .* $REPO_NAME/ 2>/dev/null || true
 
-                    ATOS_GIT_BASE_URL=ssh://bitbucketbdsfr.fsc.atos-services.net:7999/brq
+                    GIT_BASE_URL=ssh://bitbucketbdsfr.fsc.atos-services.net:7999/brq
                     if [[ $HOST_NAME =~ qlmci2 ]]; then
-                        ATOS_GIT_BASE_URL=ssh://qlmjenkins@qlmgit.usrnd.lan:29418/qlm
+                        GIT_BASE_URL=ssh://qlmjenkins@qlmgit.usrnd.lan:29418/qlm
                     fi
 
                     # Clone qat repo
-                    echo -e "--> Cloning qat, branch=$BRANCH_NAME  [$ATOS_GIT_BASE_URL] ..."
-                    cmd="git clone --single-branch --branch $BRANCH_NAME $ATOS_GIT_BASE_URL/qat"
+                    echo -e "--> Cloning qat, branch=$BRANCH_NAME  [$GIT_BASE_URL] ..."
+                    cmd="git clone --single-branch --branch $BRANCH_NAME $GIT_BASE_URL/qat"
                     echo "> $cmd"
                     eval $cmd
 
-                    # Install wheels dependencies
-                    if [[ $REPO_NAME = myqlm-interop ]]; then
-                        sudo python3 -m pip install --upgrade pip
-                        sudo pip3 install -r $WORKSPACE/qat/share/misc/myqlm-interop-requirements.txt || true
+                    # Clone cross-compilation repo for myQLM
+                    if [[ $UI_PRODUCT =~ ^(myQLM|All)$ || $JOB_QUALIFIER =~ client ]]; then
+                        echo -e "--> Cloning cross-compilation, branch=$BRANCH_NAME  [$GIT_BASE_URL] ..."
+                        cmd="git clone --single-branch --branch $BRANCH_NAME $GIT_BASE_URL/cross-compilation"
+                        echo "> $cmd"
+                        eval $cmd
                     fi
                 '''
                 script {
@@ -288,179 +326,419 @@ NIGHTLY_BUILD       = ${NIGHTLY_BUILD}\n\
 
                     // Set a few badges for the build
                     support_methods.badges()
-                }
+                } 
             }
         } // Init
 
-
-        stage('Versioning')
-        {
-            steps {
-                echo "${MAGENTA}${BOLD}[VERSIONING]${RESET}"
-                script {
-                    VERSION = sh returnStdout: true, script: '''set +x
-                        if [[ -n $UI_VERSION ]]; then
-                            VERSION="$UI_VERSION"
-                        else
-                            # UI_VERSION can be null from curl command
-                            if [[ -r qat/share/versions/$REPO_NAME.version ]]; then
-                                VERSION="$(cat qat/share/versions/$REPO_NAME.version)"
-                            else
-                                echo -e "\n**** No qat/share/versions/$REPO_NAME.version file"
-                                exit 1
-                            fi
-                        fi
-                        if [[ $BRANCH_NAME != rc ]]; then
-                            VERSION=${VERSION}.${BUILD_NUMBER}
-                        fi
-                        echo -n $VERSION
-                    '''
-                    env.VERSION="$VERSION"
-                    echo "(wheel) -> ${VERSION}"
-
-                    sh '''set +x
-                        sed -i "s/version=.*/version=\\"$VERSION\\",/" $WORKSPACE/$REPO_NAME/setup.py
-                    '''
-
-                    // Commit the new version
-                    sh '''set +x
-                        # Commit a change in versioning if any
-                        # Note: Use of qlmjenkins will not trigger a new build on commit
-                        cd $WORKSPACE/qat/share/versions
-                        committer_name=$(git log --format="%an" | head -1)
-                        git config --local user.name  "qlmjenkins"
-                        git config --local user.email "atos@noreply.com"
-                        if [[ -n $UI_VERSION && $(cat $REPO_NAME.version 2>/dev/null) != $UI_VERSION ]]; then
-                            echo -e "\n${CYAN}--> Committing version...${RESET}"
-                            echo -n "$UI_VERSION" >$REPO_NAME.version
-                            git remote -v
-                            git add $REPO_NAME.version
-                            if git commit -m "Version change [$REPO_NAME,$UI_VERSION,$committer_name]"; then
-                                git pull origin $BRANCH_NAME
-                                if git push origin HEAD:$BRANCH_NAME; then
-                                    echo -e "\nThe new version [$UI_VERSION] has been pushed"
-                                fi
-                            fi
-                        fi
-                    '''
-                }
-                buildName "${VERSION}-${OS}"
-            }
-        } // Versioning
-
-
-        stage('Install')
-        {
+        // versioning
+        stage("versioning") {
             steps {
                 script {
-                    sh '''set +x
-                        source /usr/local/bin/qatenv
-                        mkdir -p $INSTALL_DIR/lib64/python3.6/site-packages/
-                        cmd="cp -r ${REPO_NAME}/qat $INSTALL_DIR/lib64/python3.6/site-packages/"
-                        echo -e "\n> $cmd"
-                        $cmd
-
-                        # Save the artifact(s)
-                        echo -e "\nCreating ${REPO_NAME}-${VERSION}-${CURRENT_PLATFORM}.${CURRENT_OS}.tar.gz"
-                        cd $INSTALL_DIR && tar cfz $WORKSPACE/${REPO_NAME}-${VERSION}-${CURRENT_PLATFORM}.${CURRENT_OS}.tar.gz .
-                    '''
-                    archiveArtifacts artifacts: "${REPO_NAME}-${VERSION}-${CURRENT_PLATFORM}.${CURRENT_OS}.tar.gz", onlyIfSuccessful: true
+                    support_methods.versioning()
                 }
-            }
-        } // Install
+            } 
+        }
 
-
-        stage('Tests-dependencies')
-        {
+        stage("BUILD-AND-INSTALL-EL7") {
             when {
-                expression { if (env.UI_TESTS.toLowerCase().contains("skip")) { return false } else { return true } }
-            }
-            steps {
-                script {
-                    env.stage = "tests"
-                    support_methods.restore_tarballs_dependencies(env.stage)
+                expression {
+                    if (env.UI_OSVERSION.contains("7.8")) {
+                        return true
+                    } else {
+                        return false
+                    }
                 }
+                beforeAgent true
             }
-        } // Tests-dependencies
-
-
-        stage('Tests')
-        {
-            when {
-                expression { if (env.UI_TESTS.toLowerCase().contains("skip")) { return false } else { return true } }
+            agent {
+                docker {
+                    label "${LABEL}"
+                    image "qlm-devel-${QLM_VERSION_FOR_DOCKER_IMAGE}-rhel7.8:latest"
+                    args '-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v/etc/qlm/license:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools'
+                    alwaysPull false
+                    reuseNode true
+                } 
             }
             environment {
-                INSTALL_DIR                 = "$WORKSPACE/install"
-                TESTS_REPORTS_DIR           = "$REPO_NAME/tests/reports"
-                TESTS_REPORTS_DIR_JUNIT     = "$TESTS_REPORTS_DIR/junit"
-                TESTS_REPORTS_DIR_GTEST     = "$TESTS_REPORTS_DIR/gtest"
-                TESTS_REPORTS_DIR_CUNIT     = "$TESTS_REPORTS_DIR/cunit"
-                GTEST_OUTPUT                = "xml:$WORKSPACE/$TESTS_REPORTS_DIR_GTEST/"
-                TESTS_REPORTS_DIR_COVERAGE  = "$TESTS_REPORTS_DIR/coverage"
-                TESTS_REPORTS_DIR_VALGRIND  = "$TESTS_REPORTS_DIR/valgrind"
-                VALGRIND_ARGS               = "--fair-sched=no --child-silent-after-fork=yes --tool=memcheck --xml=yes --xml-file=$WORKSPACE/$TESTS_REPORTS_DIR_VALGRIND/report.xml --leak-check=full --show-leak-kinds=all --show-reachable=no --track-origins=yes --run-libc-freeres=no --gen-suppressions=all --suppressions=$QATDIR/share/misc/valgrind.supp"
+                CURRENT_OS       = "el7"
+                CURRENT_PLATFORM = "linux" 
+                DEPENDENCIES_OS  = "$CURRENT_OS"
+                BUILD_DIR        = "build_${CURRENT_PLATFORM}_${CURRENT_OS}"
+                RUNTIME_DIR      = "$WORKSPACE/runtime_${CURRENT_PLATFORM}_${CURRENT_OS}"
+                INSTALL_DIR      = "$WORKSPACE/install_${CURRENT_PLATFORM}_${CURRENT_OS}"
             }
-            steps {
-                echo "${MAGENTA}${BOLD}[TESTS]${RESET}"
-                script {
-                    catchError(buildResult: 'UNSTABLE', stageResult: 'UNSTABLE') {
-                        sh '''set +x
-                            source /usr/local/bin/qatenv
-                            cp qat/share/misc/pytest.ini $REPO_NAME/tests 2>/dev/null
-                            mkdir -p $WORKSPACE/$TESTS_REPORTS_DIR_JUNIT
-                            cd $REPO_NAME/tests
-                            cmd="python3 -m pytest -v --junitxml=reports/junit/report.xml ."
-                            echo -e "\n> $cmd"
-                            $cmd
-                        '''
+            stages
+            { 
+                stage('build')
+                {
+                    steps {
+                        script {
+                            env.stage = "build"
+                            support_methods.restore_tarballs_dependencies(env.stage)
+                            build_methods.build()
+                            install_methods.install()
+                        }
                     }
-                    test_methods.tests_reporting()
+                }
+
+                stage("rpm")
+                {
+                    when {
+                        allOf {
+                            expression { if (UI_PRODUCT.contains("myQLM")) { return false } else { return true } };
+                            not { equals expected:'/client', actual: "${JOB_QUALIFIER}" }
+                        }
+                    }
+                    steps {
+                        script {
+                            packaging_methods.rpm()
+                        }
+                    }
+                }
+
+                stage("wheel")
+                {
+                    when {
+                        anyOf {
+                            expression { if (UI_PRODUCT.startsWith("QLM")) { return false } else { return true } };
+                            equals expected:'/client', actual: "${JOB_QUALIFIER}"
+                        }
+                    }
+                    environment {
+                        BUILD_DIR = "build_${CURRENT_PLATFORM}_${CURRENT_OS}"
+                    }
+                    steps {
+                        script {
+                            packaging_methods.wheel()
+                        }
+                    }
                 }
             }
-        } // Tests
+        }
 
+        stage("BUILD-AND-INSTALL-EL8") {
+            when {
+                anyOf {
+                    expression { if (UI_PRODUCT.startsWith("QLM")) { return false } else { return true } };
+                    expression { if (env.UI_OSVERSION.contains("8.2")) { return true } else { return false } }
+                }
+                beforeAgent true
+            }
+            agent {
+                docker {
+                    label "${LABEL}"
+                    image "qlm-devel-${QLM_VERSION_FOR_DOCKER_IMAGE}-rhel8.2:latest"
+                    args '-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v/etc/qlm/license:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools'
+                    alwaysPull false
+                    reuseNode true
+                } 
+            }
+            environment {
+                CURRENT_OS       = "el8"
+                CURRENT_PLATFORM = "linux" 
+                DEPENDENCIES_OS  = "$CURRENT_OS"
+                BUILD_DIR        = "build_${CURRENT_PLATFORM}_${CURRENT_OS}"
+                RUNTIME_DIR      = "$WORKSPACE/runtime_${CURRENT_PLATFORM}_${CURRENT_OS}"
+                INSTALL_DIR      = "$WORKSPACE/install_${CURRENT_PLATFORM}_${CURRENT_OS}"
+            }
+            stages {
+	        stage("linguist")
+                {
+                    steps {
+                        script {
+                            support_methods.linguist()
+                        }
+                    }
+                }
 
-        stage("WHEEL")
-        {
-            steps {
-                echo "${MAGENTA}${BOLD}[WHEEL]${RESET}"
-                script {
-                    sh '''set +x
-                        source /usr/local/bin/qatenv
-                        cd $WORKSPACE/$REPO_NAME
+                stage('build')
+                {
+                    steps {
+                        script {
+                            env.stage = "build"
+                            support_methods.restore_tarballs_dependencies(env.stage)
+                            build_methods.build()
+                            install_methods.install()
+                        }
+                    }
+                }
 
-                        echo -e "\n${CYAN}Building myQLM wheels...${RESET}"
-                        cmd="$PYTHON setup.py bdist_wheel"
-                        echo -e "\n> ${GREEN}$cmd${RESET}"
-                        $cmd
- 
-                        echo -e "\n\n${MAGENTA}WHEEL packaged files list${RESET}"
-                        find dist -type f -exec echo -e "$BLUE"{}"${RESET}" \\; -exec unzip -l {} \\;
+                stage('build-profiling')
+                {
+                    when {
+                        allOf {
+                            expression { if (env.UI_TESTS.toLowerCase().contains("with code coverage")) { return true } else { return false } };
+                            expression { if (env.JOB_NAME.startsWith("myqlm-")) { return false } else { return true } }
+                        }
+                    }
+                    environment {
+                        BUILD_DIR   = "build-profiling_${CURRENT_PLATFORM}_${CURRENT_OS}"
+                        INSTALL_DIR = "$WORKSPACE/install-profiling_${CURRENT_PLATFORM}_${CURRENT_OS}"
+                    }
+                    steps {
+                        script {
+                            env.stage = "build"
+                            support_methods.restore_tarballs_dependencies(env.stage)
+                            build_methods.build_profiling()
+                            install_methods.install_profiling()
+                        }
+                    }
+                }
+
+                stage("rpm")
+                {
+                    when {
+                        allOf {
+                            expression { if (UI_PRODUCT.startsWith("myQLM")) { return false } else { return true } };
+                            not { equals expected:'/client', actual: "${JOB_QUALIFIER}" }
+                        }
+                    }
+                    steps {
+                        script {
+                            packaging_methods.rpm()
+                        }
+                    }
+                } // rpm
+
+                stage("wheel")
+                {
+                    when {
+                        anyOf {
+                            expression { if (UI_PRODUCT.startsWith("QLM")) { return false } else { return true } };
+                            equals expected:'/client', actual: "${JOB_QUALIFIER}"
+                        }
+                    }
+                    environment {
+                        BUILD_DIR = "build_${CURRENT_PLATFORM}_${CURRENT_OS}"
+                    }
+                    steps {
+                        script {
+                            packaging_methods.wheel()
+                        }
+                    }
+                }
+            }
+        }
+
+        stage("CROSS-COMPILATION") {
+            when {
+                anyOf {
+                    allOf {
+                        expression { if (UI_PRODUCT.startsWith("QLM"))  { return false } else { return true } };
+                        expression { if (JOB_NAME.startsWith("myqlm-")) { return false } else { return true } }
+                    };
+                    equals expected:'/client', actual: "${JOB_QUALIFIER}"
+                }
+                beforeAgent true
+            }
+            agent {
+                docker {
+                    label "${LABEL}"
+                    image "qlm-devel-${QLM_VERSION_FOR_DOCKER_IMAGE}-rhel8.2:latest"
+                    args '-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v/etc/qlm/license:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools'
+                    alwaysPull false
+                    reuseNode true
+                }
+            }
+            environment {
+                CURRENT_OS       = "el8"
+                CURRENT_PLATFORM = "win64" 
+                DEPENDENCIES_OS  = "$CURRENT_OS"
+                RUNTIME_DIR      = "$WORKSPACE/runtime_${CURRENT_PLATFORM}_${CURRENT_OS}"
+                MYQLM_PLATFORM   = "WIN_64"
+                BUILD_DIR        = "build-${MYQLM_PLATFORM}"
+                INSTALL_DIR      = "$WORKSPACE/install_${CURRENT_PLATFORM}_${CURRENT_OS}"
+            }
+            stages {
+                stage('build-dependencies-cross-compilation')
+                {
+                    steps {
+                        script {
+                            env.stage = "build"
+                            support_methods.restore_tarballs_dependencies(env.stage)
+                            build_methods.build_cross_compilation()
+                            install_methods.install_cross_compilation()
+                        }
+                    }
+                }
+
+                stage("wheel-cross-compilation")
+                {
+                    steps {
+                        script {
+                            packaging_methods.wheel_cross_compilation()
+                        }
+                    }
+                } // wheel
+            }
+        }
+
+        stage("STATIC-ANALYSIS") {
+            agent {
+                docker {
+                    label "${LABEL}"
+                    image "qlm-devel-${QLM_VERSION_FOR_DOCKER_IMAGE}-rhel8.2:latest"
+                    args '-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v/etc/qlm/license:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools'
+                    alwaysPull false
+                    reuseNode true
+                } 
+            }
+            environment {
+                CURRENT_OS       = "el8"
+                CURRENT_PLATFORM = "linux" 
+                DEPENDENCIES_OS  = "$CURRENT_OS"
+                RUNTIME_DIR      = "$WORKSPACE/runtime_${CURRENT_PLATFORM}_${CURRENT_OS}"
+            }
+            stages {
+                stage('static-analysis')
+                {
+                    environment {
+                        BUILD_DIR = "build_${CURRENT_PLATFORM}_${CURRENT_OS}"
+                    }
+                    parallel
+                    {
+                        stage('cppcheck') 
+                        {
+                            steps {
+                                script {
+                                    static_analysis_methods.cppcheck()
+                                }
+                            }
+                        } // Cppcheck
+             
+             
+                        stage("pylint")
+                        {
+                            steps {
+                                script {
+                                    static_analysis_methods.pylint()
+                                }
+                            }
+                        } // Pylint
     
-                        echo -e "\n\n${MAGENTA}METADATA file${RESET}"
-                        find dist -type f -exec unzip -p {} ${REPO_NAME//-/_}-$VERSION.dist-info/METADATA \\;
-                    '''
-                    // Save the source tarball and wheel artifacts
-                    archiveArtifacts artifacts: "${REPO_NAME}/dist/*.whl", onlyIfSuccessful: true
-                }
-            }
-        } // wheel
-    } // stages
 
+                        stage("flake8")
+                        {
+                            steps {
+                                script {
+                                    static_analysis_methods.flake8()
+                                }
+                            }
+                        } // Flake8
+                    }
+                } // static analysis
+            }
+        }
+
+        stage("UNIT-TESTS") {
+            agent {
+                docker {
+                    label "${LABEL}"
+                    image "qlm-devel-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL}:latest"
+                    args '-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v/etc/qlm/license:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools'
+                    alwaysPull false
+                    reuseNode true
+                } 
+            }
+            environment {
+                CURRENT_OS       = "$OS"
+                CURRENT_PLATFORM = "linux" 
+                DEPENDENCIES_OS  = "$CURRENT_OS"
+                RUNTIME_DIR      = "$WORKSPACE/runtime_${CURRENT_PLATFORM}_${CURRENT_OS}"
+            }
+            stages {
+                stage('tests-dependencies') 
+                {
+                    when {
+                        expression { if (env.UI_TESTS.toLowerCase().contains("skip")) { return false } else { return true } }
+                    }
+                    steps {
+                        echo "${MAGENTA}${BOLD}[TESTS-DEPENDENCIES]${RESET}"
+                        script {
+                            env.stage = "tests"
+                            support_methods.restore_tarballs_dependencies(env.stage)
+                        }
+                    }
+                } // Tests-dependencies
+     
+                stage('tests')
+                {
+                    when { 
+                        allOf {
+                            expression { if (env.UI_TESTS.toLowerCase().contains("with code coverage")) { return false } else { return true } }
+                            expression { if (env.UI_TESTS.toLowerCase().contains("skip"))               { return false } else { return true } }
+                        }
+                    }
+                    environment {
+                        BUILD_DIR                   = "build_${CURRENT_PLATFORM}_${CURRENT_OS}"
+                        INSTALL_DIR                 = "$WORKSPACE/install_${CURRENT_PLATFORM}_${CURRENT_OS}"
+                        TESTS_REPORTS_DIR           = "$REPO_NAME/$BUILD_DIR/tests/reports"     
+                        TESTS_REPORTS_DIR_JUNIT     = "$TESTS_REPORTS_DIR/junit"
+                        TESTS_REPORTS_DIR_GTEST     = "$TESTS_REPORTS_DIR/gtest"
+                        TESTS_REPORTS_DIR_CUNIT     = "$TESTS_REPORTS_DIR/cunit"
+                        GTEST_OUTPUT                = "xml:$WORKSPACE/$TESTS_REPORTS_DIR_GTEST/"
+                        TESTS_REPORTS_DIR_VALGRIND  = "$TESTS_REPORTS_DIR/valgrind"
+                        VALGRIND_ARGS               = "--fair-sched=no --child-silent-after-fork=yes --tool=memcheck --xml=yes --xml-file=$WORKSPACE/$TESTS_REPORTS_DIR_VALGRIND/report.xml --leak-check=full --show-leak-kinds=all --show-reachable=no --track-origins=yes --run-libc-freeres=no --gen-suppressions=all --suppressions=$QATDIR/share/misc/valgrind.supp"
+                    }
+                    steps {
+                        script {
+                            test_methods.tests()
+                            test_methods.tests_reporting()
+                        }
+                    }
+                } // tests
+     
+                stage('tests-with-code-coverage')
+                {
+                    when { 
+                        allOf {
+                            expression { if (env.UI_TESTS.toLowerCase().contains("with code coverage")) { return true } else { return false } };
+                            expression { if (env.UI_OSVERSION.contains("8.2")) { return true } else { return false } }
+                        }
+                    }
+                    environment {
+                        BUILD_DIR                   = "build-profiling_${CURRENT_PLATFORM}_${CURRENT_OS}"
+                        INSTALL_DIR                 = "$WORKSPACE/install-profiling_${CURRENT_PLATFORM}_${CURRENT_OS}"
+                        TESTS_REPORTS_DIR           = "$REPO_NAME/${BUILD_DIR}/tests/reports"     
+                        TESTS_REPORTS_DIR_JUNIT     = "$TESTS_REPORTS_DIR/junit"
+                        TESTS_REPORTS_DIR_GTEST     = "$TESTS_REPORTS_DIR/gtest"
+                        TESTS_REPORTS_DIR_CUNIT     = "$TESTS_REPORTS_DIR/cunit"
+                        GTEST_OUTPUT                = "xml:$WORKSPACE/$TESTS_REPORTS_DIR_GTEST/"
+                        TESTS_REPORTS_DIR_COVERAGE  = "$TESTS_REPORTS_DIR/coverage"
+                        TESTS_REPORTS_DIR_COVERAGEPY= "$REPO_NAME/${BUILD_DIR}/tests/htmlcov"
+                        TESTS_REPORTS_DIR_VALGRIND  = "$TESTS_REPORTS_DIR/valgrind"
+                        VALGRIND_ARGS               = "--fair-sched=no --child-silent-after-fork=yes --tool=memcheck --xml=yes --xml-file=$WORKSPACE/$TESTS_REPORTS_DIR_VALGRIND/report.xml --leak-check=full --show-leak-kinds=all --show-reachable=no --track-origins=yes --run-libc-freeres=no --gen-suppressions=all --suppressions=$QATDIR/share/misc/valgrind.supp"
+                    }
+                    steps {
+                        script {
+                            test_methods.tests_with_code_coverage()
+                            test_methods.tests_reporting()
+                        }
+                    }
+                } // tests-with-code-coverage
+            }
+        }
+    } // stages
 
     post
     {
-        always
+        success
         {
-            echo "${MAGENTA}${BOLD}[POST]${RESET}"
+            echo "${MAGENTA}${BOLD}[POST:success]${RESET}"
             script {
                 sh '''set +x
                     rm -f tarballs_artifacts/.*.artifact 2>/dev/null
                 '''
+            }
+        } // success
+
+        always
+        {
+            echo "${MAGENTA}${BOLD}[POST:always]${RESET}"
+            script {
                 // Send emails only if not started by upstream (qat pipeline)
                 if (!BUILD_CAUSE.contains("upstream")) {
-                    emailext body:
-                        "${BUILD_URL}",
+                    emailext body: "${BUILD_URL}",
                         recipientProviders: [[$class:'CulpritsRecipientProvider'],[$class:'RequesterRecipientProvider']],
                         subject: "${BUILD_TAG} - ${currentBuild.result}"
                 }

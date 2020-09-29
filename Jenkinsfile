@@ -310,7 +310,7 @@ REPO_NAME           = ${REPO_NAME}\n\
             when {
                 expression {
                     echo "${B_MAGENTA}********************* [[ EL7 ]] *********************${RESET}"
-                    return internal_methods.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "EL7-COMPILATION")
+                    return internal_methods.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "EL7")
                 }
                 beforeAgent true
             }

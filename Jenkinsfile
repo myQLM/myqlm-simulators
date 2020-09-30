@@ -413,7 +413,10 @@ REPO_NAME           = ${REPO_NAME}\n\
 
                 stage("build-profiling") {
                     when {
-                        expression { if (env.UI_TESTS.toLowerCase().contains("with code coverage")) { return true } else { return false } }
+                        allOf {
+                            expression { if (env.UI_TESTS.toLowerCase().contains("with code coverage")) { return true } else { return false } };
+                            expression { return internal_methods.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "EL8", "$STAGE_NAME") }
+                        }
                     }
                     environment {
                         BUILD_DIR   = "build-profiling_${CURRENT_PLATFORM}_${CURRENT_OS}"
@@ -617,6 +620,7 @@ REPO_NAME           = ${REPO_NAME}\n\
                     when { 
                         allOf {
                             expression { if (env.UI_TESTS.toLowerCase().contains("with code coverage")) { return true } else { return false } };
+                            expression { return internal_methods.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "UNIT-TESTS", "$STAGE_NAME") }
                         }
                     }
                     environment {

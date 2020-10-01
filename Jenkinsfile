@@ -276,23 +276,16 @@ REPO_NAME           = ${REPO_NAME}\n\
                     fi
                 '''
                 script {
-                    print "Loading build_methods functions ..."
-                    build_methods           = load "${QATDIR}/jenkins/methods/build"
-                    print "Loading install_methods functions ..."
-                    install_methods         = load "${QATDIR}/jenkins/methods/install"
-                    print "Loading internal_methods functions ..."
-                    internal_methods        = load "${QATDIR}/jenkins/methods/internal"
-                    print "Loading packaging_methods functions ..."
-                    packaging_methods       = load "${QATDIR}/jenkins/methods/packaging"
-                    print "Loading static_analysis_methods functions ..."
-                    static_analysis_methods = load "${QATDIR}/jenkins/methods/static_analysis"
-                    print "Loading test_methods functions ..."
-                    test_methods            = load "${QATDIR}/jenkins/methods/tests"
-                    print "Loading support_methods functions ..."
-                    support_methods         = load "${QATDIR}/jenkins/methods/support"
+                    print "Loading build functions           ..."; build           = load "${QATDIR}/jenkins/methods/build"
+                    print "Loading install functions         ..."; install         = load "${QATDIR}/jenkins/methods/install"
+                    print "Loading internal functions        ..."; internal        = load "${QATDIR}/jenkins/methods/internal"
+                    print "Loading packaging functions       ..."; packaging       = load "${QATDIR}/jenkins/methods/packaging"
+                    print "Loading static_analysis functions ..."; static_analysis = load "${QATDIR}/jenkins/methods/static_analysis"
+                    print "Loading test functions            ..."; test            = load "${QATDIR}/jenkins/methods/tests"
+                    print "Loading support functions         ..."; support         = load "${QATDIR}/jenkins/methods/support"
 
                     // Set a few badges for the build
-                    support_methods.badges()
+                    support.badges()
                 } 
             }
         }
@@ -300,7 +293,7 @@ REPO_NAME           = ${REPO_NAME}\n\
         stage("versioning") {
             steps {
                 script {
-                    support_methods.versioning()
+                    support.versioning()
                 }
             } 
         }
@@ -310,7 +303,7 @@ REPO_NAME           = ${REPO_NAME}\n\
             when {
                 expression {
                     echo "${B_MAGENTA}********************* [[ EL7 ]] *********************${RESET}"
-                    return internal_methods.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "EL7")
+                    return internal.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "EL7")
                 }
                 beforeAgent true
             }
@@ -336,30 +329,30 @@ REPO_NAME           = ${REPO_NAME}\n\
                     steps {
                         script {
                             env.stage = "build"
-                            support_methods.restore_tarballs_dependencies(env.stage)
-                            build_methods.build()
-                            install_methods.install()
+                            support.restore_tarballs_dependencies(env.stage)
+                            build.build()
+                            install.install()
                         }
                     }
                 }
 
                 stage("rpm") {
-                    when { expression { return internal_methods.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "EL7", "$STAGE_NAME") } }
+                    when { expression { return internal.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "EL7", "$STAGE_NAME") } }
                     steps {
                         script {
-                            packaging_methods.rpm()
+                            packaging.rpm()
                         }
                     }
                 }
 
                 stage("wheel") {
-                    when { expression { return internal_methods.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "EL7", "$STAGE_NAME") } }
+                    when { expression { return internal.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "EL7", "$STAGE_NAME") } }
                     environment {
                         BUILD_DIR = "build_${CURRENT_PLATFORM}_${CURRENT_OS}"
                     }
                     steps {
                         script {
-                            packaging_methods.wheel()
+                            packaging.wheel()
                         }
                     }
                 }
@@ -371,7 +364,7 @@ REPO_NAME           = ${REPO_NAME}\n\
             when {
                 expression {
                     echo "${B_MAGENTA}********************* [[ EL8 ]] *********************${RESET}"
-                    return internal_methods.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "EL8")
+                    return internal.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "EL8")
                 }
                 beforeAgent true
             }
@@ -395,7 +388,7 @@ REPO_NAME           = ${REPO_NAME}\n\
 	        stage("linguist") {
                     steps {
                         script {
-                            support_methods.linguist()
+                            support.linguist()
                         }
                     }
                 }
@@ -404,9 +397,9 @@ REPO_NAME           = ${REPO_NAME}\n\
                     steps {
                         script {
                             env.stage = "build"
-                            support_methods.restore_tarballs_dependencies(env.stage)
-                            build_methods.build()
-                            install_methods.install()
+                            support.restore_tarballs_dependencies(env.stage)
+                            build.build()
+                            install.install()
                         }
                     }
                 }
@@ -415,7 +408,7 @@ REPO_NAME           = ${REPO_NAME}\n\
                     when {
                         allOf {
                             expression { if (env.UI_TESTS.toLowerCase().contains("with code coverage")) { return true } else { return false } };
-                            expression { return internal_methods.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "EL8", "$STAGE_NAME") }
+                            expression { return internal.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "EL8", "$STAGE_NAME") }
                         }
                     }
                     environment {
@@ -425,30 +418,30 @@ REPO_NAME           = ${REPO_NAME}\n\
                     steps {
                         script {
                             env.stage = "build"
-                            support_methods.restore_tarballs_dependencies(env.stage)
-                            build_methods.build_profiling()
-                            install_methods.install_profiling()
+                            support.restore_tarballs_dependencies(env.stage)
+                            build.build_profiling()
+                            install.install_profiling()
                         }
                     }
                 }
 
                 stage("rpm") {
-                    when { expression { return internal_methods.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "EL8", "$STAGE_NAME") } }
+                    when { expression { return internal.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "EL8", "$STAGE_NAME") } }
                     steps {
                         script {
-                            packaging_methods.rpm()
+                            packaging.rpm()
                         }
                     }
                 }
 
                 stage("wheel") {
-                    when { expression { return internal_methods.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "EL8", "$STAGE_NAME") } }
+                    when { expression { return internal.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "EL8", "$STAGE_NAME") } }
                     environment {
                         BUILD_DIR = "build_${CURRENT_PLATFORM}_${CURRENT_OS}"
                     }
                     steps {
                         script {
-                            packaging_methods.wheel()
+                            packaging.wheel()
                         }
                     }
                 }
@@ -460,7 +453,7 @@ REPO_NAME           = ${REPO_NAME}\n\
             when {
                 expression {
                     echo "${B_MAGENTA}********************* [[ CROSS-COMPILATION ]] *********************${RESET}"
-                    return internal_methods.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "CROSS-COMPILATION")
+                    return internal.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "CROSS-COMPILATION")
                 }
                 beforeAgent true
             }
@@ -486,18 +479,18 @@ REPO_NAME           = ${REPO_NAME}\n\
                     steps {
                         script {
                             env.stage = "build"
-                            support_methods.restore_tarballs_dependencies(env.stage)
-                            build_methods.build_cross_compilation()
-                            install_methods.install_cross_compilation()
+                            support.restore_tarballs_dependencies(env.stage)
+                            build.build_cross_compilation()
+                            install.install_cross_compilation()
                         }
                     }
                 }
 
                 stage("wheel") {
-                    when { expression { return internal_methods.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "CROSS-COMPILATION", "$STAGE_NAME") } }
+                    when { expression { return internal.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "CROSS-COMPILATION", "$STAGE_NAME") } }
                     steps {
                         script {
-                            packaging_methods.wheel_cross_compilation()
+                            packaging.wheel_cross_compilation()
                         }
                     }
                 }
@@ -509,7 +502,7 @@ REPO_NAME           = ${REPO_NAME}\n\
             when {
                 expression {
                     echo "${B_MAGENTA}********************* [[ STATIC-ANALYSIS ]] *********************${RESET}"
-                    return internal_methods.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "STATIC-ANALYSIS")
+                    return internal.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "STATIC-ANALYSIS")
                 }
             }
             agent {
@@ -534,28 +527,28 @@ REPO_NAME           = ${REPO_NAME}\n\
                     parallel
                     {
                         stage("cppcheck") {
-                            when { expression { return internal_methods.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "STATIC-ANALYSIS", "$STAGE_NAME") } }
+                            when { expression { return internal.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "STATIC-ANALYSIS", "$STAGE_NAME") } }
                             steps {
                                 script {
-                                    static_analysis_methods.cppcheck()
+                                    static_analysis.cppcheck()
                                 }
                             }
                         }
              
                         stage("pylint") {
-                            when { expression { return internal_methods.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "STATIC-ANALYSIS", "$STAGE_NAME") } }
+                            when { expression { return internal.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "STATIC-ANALYSIS", "$STAGE_NAME") } }
                             steps {
                                 script {
-                                    static_analysis_methods.pylint()
+                                    static_analysis.pylint()
                                 }
                             }
                         }
     
                         stage("flake8") {
-                            when { expression { return internal_methods.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "STATIC-ANALYSIS", "$STAGE_NAME") } }
+                            when { expression { return internal.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "STATIC-ANALYSIS", "$STAGE_NAME") } }
                             steps {
                                 script {
-                                    static_analysis_methods.flake8()
+                                    static_analysis.flake8()
                                 }
                             }
                         }
@@ -569,7 +562,7 @@ REPO_NAME           = ${REPO_NAME}\n\
             when {
                 expression {
                     echo "${B_MAGENTA}********************* [[ UNIT-TESTS ]] *********************${RESET}"
-                    return internal_methods.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "UNIT-TESTS")
+                    return internal.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "UNIT-TESTS")
                 }
                 beforeAgent true
             }
@@ -583,68 +576,35 @@ REPO_NAME           = ${REPO_NAME}\n\
                 } 
             }
             environment {
-                CURRENT_OS       = "$OS"
-                CURRENT_PLATFORM = "linux" 
-                RUNTIME_DIR      = "$WORKSPACE/runtime_${CURRENT_PLATFORM}_${CURRENT_OS}"
+                CURRENT_OS                   = "$OS"
+                CURRENT_PLATFORM             = "linux" 
+                RUNTIME_DIR                  = "$WORKSPACE/runtime_${CURRENT_PLATFORM}_${CURRENT_OS}"
+                INSTALL_DIR                  = support.getenv("INSTALL_DIR", "${CURRENT_PLATFORM}", "${CURRENT_OS}")
+                BUILD_DIR                    = support.getenv("BUILD_DIR",   "${CURRENT_PLATFORM}", "${CURRENT_OS}")
+                TESTS_REPORTS_DIR            = "$WORKSPACE/$REPO_NAME/$BUILD_DIR/tests/reports"
+                TESTS_REPORTS_DIR_JUNIT      = "$TESTS_REPORTS_DIR/junit"
+                TESTS_REPORTS_DIR_GTEST      = "$TESTS_REPORTS_DIR/gtest"
+                TESTS_REPORTS_DIR_CUNIT      = "$TESTS_REPORTS_DIR/cunit"
+                GTEST_OUTPUT                 = "xml:$WORKSPACE/$TESTS_REPORTS_DIR_GTEST/"
+                TESTS_REPORTS_DIR_VALGRIND   = "$TESTS_REPORTS_DIR/valgrind"
+                TESTS_REPORTS_DIR_COVERAGE   = "$TESTS_REPORTS_DIR/coverage"
+                TESTS_REPORTS_DIR_COVERAGEPY = "$REPO_NAME/${BUILD_DIR}/tests/htmlcov"
+                VALGRIND_ARGS                = "--fair-sched=no --child-silent-after-fork=yes --tool=memcheck --xml=yes --xml-file=$WORKSPACE/$TESTS_REPORTS_DIR_VALGRIND/report.xml --leak-check=full --show-leak-kinds=all --show-reachable=no --track-origins=yes --run-libc-freeres=no --gen-suppressions=all --suppressions=$QAT"
             }
             stages {
                 stage("tests") {
                     when { 
-                        allOf {
-                            expression { if (env.UI_TESTS.toLowerCase().contains("with code coverage")) { return false } else { return true } };
-                            expression { if (env.UI_TESTS.toLowerCase().contains("skip"))               { return false } else { return true } }
-                        }
-                    }
-                    environment {
-                        BUILD_DIR                   = "build_${CURRENT_PLATFORM}_${CURRENT_OS}"
-                        INSTALL_DIR                 = "$WORKSPACE/install_${CURRENT_PLATFORM}_${CURRENT_OS}"
-                        TESTS_REPORTS_DIR           = "$REPO_NAME/$BUILD_DIR/tests/reports"     
-                        TESTS_REPORTS_DIR_JUNIT     = "$TESTS_REPORTS_DIR/junit"
-                        TESTS_REPORTS_DIR_GTEST     = "$TESTS_REPORTS_DIR/gtest"
-                        TESTS_REPORTS_DIR_CUNIT     = "$TESTS_REPORTS_DIR/cunit"
-                        GTEST_OUTPUT                = "xml:$WORKSPACE/$TESTS_REPORTS_DIR_GTEST/"
-                        TESTS_REPORTS_DIR_VALGRIND  = "$TESTS_REPORTS_DIR/valgrind"
-                        VALGRIND_ARGS               = "--fair-sched=no --child-silent-after-fork=yes --tool=memcheck --xml=yes --xml-file=$WORKSPACE/$TESTS_REPORTS_DIR_VALGRIND/report.xml --leak-check=full --show-leak-kinds=all --show-reachable=no --track-origins=yes --run-libc-freeres=no --gen-suppressions=all --suppressions=$QATDIR/share/misc/valgrind.supp"
+                        expression { if (env.UI_TESTS.toLowerCase().contains("skip")) { return false } else { return true } }
                     }
                     steps {
                         script {
                             env.stage = "tests"
-                            support_methods.restore_tarballs_dependencies(env.stage)
-                            test_methods.tests()
-                            test_methods.tests_reporting()
+                            support.restore_tarballs_dependencies(env.stage)
+                            test.tests()
+                            test.tests_reporting()
                         }
                     }
-                }
-     
-                stage("tests-with-code-coverage") {
-                    when { 
-                        allOf {
-                            expression { if (env.UI_TESTS.toLowerCase().contains("with code coverage")) { return true } else { return false } };
-                            expression { return internal_methods.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "UNIT-TESTS", "$STAGE_NAME") }
-                        }
-                    }
-                    environment {
-                        BUILD_DIR                   = "build-profiling_${CURRENT_PLATFORM}_${CURRENT_OS}"
-                        INSTALL_DIR                 = "$WORKSPACE/install-profiling_${CURRENT_PLATFORM}_${CURRENT_OS}"
-                        TESTS_REPORTS_DIR           = "$REPO_NAME/${BUILD_DIR}/tests/reports"     
-                        TESTS_REPORTS_DIR_JUNIT     = "$TESTS_REPORTS_DIR/junit"
-                        TESTS_REPORTS_DIR_GTEST     = "$TESTS_REPORTS_DIR/gtest"
-                        TESTS_REPORTS_DIR_CUNIT     = "$TESTS_REPORTS_DIR/cunit"
-                        GTEST_OUTPUT                = "xml:$WORKSPACE/$TESTS_REPORTS_DIR_GTEST/"
-                        TESTS_REPORTS_DIR_COVERAGE  = "$TESTS_REPORTS_DIR/coverage"
-                        TESTS_REPORTS_DIR_COVERAGEPY= "$REPO_NAME/${BUILD_DIR}/tests/htmlcov"
-                        TESTS_REPORTS_DIR_VALGRIND  = "$TESTS_REPORTS_DIR/valgrind"
-                        VALGRIND_ARGS               = "--fair-sched=no --child-silent-after-fork=yes --tool=memcheck --xml=yes --xml-file=$WORKSPACE/$TESTS_REPORTS_DIR_VALGRIND/report.xml --leak-check=full --show-leak-kinds=all --show-reachable=no --track-origins=yes --run-libc-freeres=no --gen-suppressions=all --suppressions=$QATDIR/share/misc/valgrind.supp"
-                    }
-                    steps {
-                        script {
-                            env.stage = "tests"
-                            support_methods.restore_tarballs_dependencies(env.stage)
-                            test_methods.tests_with_code_coverage()
-                            test_methods.tests_reporting()
-                        }
-                    }
-                }
+                } 
             }
         }
     } // stages
@@ -658,12 +618,13 @@ REPO_NAME           = ${REPO_NAME}\n\
                     rm -f tarballs_artifacts/.*.artifact 2>/dev/null
                 '''
             }
-        } // success
+        }
 
         always {
             echo "${B_MAGENTA}[POST:always]${RESET}"
             script {
-                // Send emails only if not started by upstream (qat pipeline)
+                support.badges("post")
+                // Send emails only if not started by upstream (main)
                 if (!BUILD_CAUSE.contains("upstream")) {
                     emailext body: "${BUILD_URL}",
                         recipientProviders: [[$class:'CulpritsRecipientProvider'],[$class:'RequesterRecipientProvider']],

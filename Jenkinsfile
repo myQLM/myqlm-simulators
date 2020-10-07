@@ -27,17 +27,19 @@ try {
     OS = "el8"
 }
 
-def OSLABEL  = "rhel$UI_OSVERSION"
-if (!env.BRANCH_NAME) {
-    env.BRANCH_NAME = "master"
-}
+def OSLABEL                   = "rhel$UI_OSVERSION"
+def OSLABEL_CROSS_COMPILATION = "rhel8.2"
 
 HOST_NAME = InetAddress.getLocalHost().getHostName()
 
+//UI_PRODUCT = "default"
+//if (params.UI_PRODUCT) UI_PRODUCT = params.UI_PRODUCT
+
 // Expose variables to bash and groovy functions
-env.OS = "$OS"
-env.HOST_NAME = "$HOST_NAME"
+env.OS            = "$OS"
+env.HOST_NAME     = "$HOST_NAME"
 env.NIGHTLY_BUILD = params.NIGHTLY_BUILD
+//env.UI_PRODUCT    = UI_PRODUCT
 
 
 // ---------------------------------------------------------------------------
@@ -95,15 +97,6 @@ properties([
                 ]
             ]
         ],
-        [$class: 'ChoiceParameter', choiceType: 'PT_RADIO', description: '', filterLength: 1, filterable: false, name: 'UI_PRODUCT', randomName: 'choice-parameter-2765756439171963', 
-            script: [
-                $class: 'ScriptlerScript',
-                parameters: [
-                    [$class: 'org.biouno.unochoice.model.ScriptlerScriptParameter', name: 'job_name', value: "${JOB_NAME}"]
-                ],
-                scriptlerScriptId: 'selectProductsToBuild.groovy'
-            ]
-        ],
         [$class: 'ChoiceParameter', choiceType: 'PT_CHECKBOX', description: 'VERBOSE option for cmake', filterLength: 1, filterable: false, name: 'UI_VERBOSE', randomName: 'choice-parameter-2765756439171960', 
             script: [
                 $class: 'GroovyScript', 
@@ -135,10 +128,7 @@ properties([
                     classpath: [],
                     sandbox: false,
                     script: '''
-                        if ("$UI_OSVERSION".startsWith("7") || "$BRANCH_NAME".contains("rc"))
-                            return ['Run tests:selected', 'Run tests with code coverage:disabled', 'Skip tests']
-                        else
-                            return ['Run tests:selected', 'Run tests with code coverage', 'Skip tests']
+                        return ['Run tests:selected', 'Run tests with code coverage', 'Skip tests']
                     '''
                 ]
             ]
@@ -183,49 +173,60 @@ pipeline
         BUILD_CAUSE_NAME =  currentBuild.getBuildCauses()[0].userName.toString()
 
         BUILD_TYPE = sh returnStdout: true, script: '''set +x
-            if [[ $BRANCH_NAME = rc ]]; then
-                echo -n release
-            else
-                echo -n debug
-            fi
+            build_type=debug
+            [[ $BRANCH_NAME = rc ]] && build_type=release
+            echo -n build_type
         '''
 
         REPO_TYPE = sh returnStdout: true, script: '''set +x
+            repo_type=dev
             if [[ $NIGHTLY_BUILD = true ]]; then
-                echo -n mls
+                repo_type=mls
             else 
-                if [[ $BRANCH_NAME = master ]]; then
-                    echo -n dev
-                else
-                    echo -n rc
-                fi
+                [[ $BRANCH_NAME != master ]] && repo_type=rc
             fi
+            echo -n $repo_type
         '''
 
         QUALIFIED_REPO_NAME = sh returnStdout: true, script: '''set +x
-            echo -n ${JOB_NAME%%/*}
+            qualified_repo_name=${JOB_NAME%%/*}
+            echo -n $qualified_repo_name
         '''
 
         JOB_QUALIFIER = sh returnStdout: true, script: '''set +x
-            JOB_QUALIFIER=${JOB_NAME#*-}
-            JOB_QUALIFIER=${JOB_QUALIFIER#*-}
+            job_qualifier=${JOB_NAME#*-}
+            job_qualifier=${job_qualifier#*-}
             n=${JOB_NAME//[^-]}
             if ((${#n} > 1)); then
-                echo -n "/${JOB_QUALIFIER%%/*}"
+                job_qualifier="${job_qualifier%%/*}"
             else
-                echo -n "/"
+                job_qualifier='-'
             fi
+            echo -n $job_qualifier
+        '''
+
+        JOB_QUALIFIER_PATH = sh returnStdout: true, script: '''set +x
+            job_qualifier=${JOB_NAME#*-}
+            job_qualifier=${job_qualifier#*-}
+            n=${JOB_NAME//[^-]}
+            if ((${#n} > 1)); then
+                job_qualifier="/${job_qualifier%%/*}"
+            else
+                job_qualifier='-'
+            fi
+            job_qualifier_path="${job_qualifier//-//}"
+            echo -n $job_qualifier_path
         '''
 
         REPO_NAME = sh returnStdout: true, script: '''set +x
-            if [[ ! $JOB_NAME =~ qat-functional-tests && \
-                    $JOB_NAME =~ ^qat-.*-.*$ ]]; then
-                JOB_NAME=${JOB_NAME%-*}
-                if [[ $JOB_NAME =~ ^qat-.*-.*$ ]]; then
-                    JOB_NAME=${JOB_NAME%-*}
-                fi
+            job_name=$JOB_NAME
+            if [[ ! $job_name =~ qat-functional-tests && \
+                    $job_name =~ ^qat-.*-.*$ ]]; then
+                job_name=${job_name%-*}
+                [[ $job_name =~ ^qat-.*-.*$ ]] && job_name=${job_name%-*}
             fi
-            echo -n ${JOB_NAME%%/*}
+            job_name=${job_name%%/*}
+            echo -n $job_name
         '''
     } 
 
@@ -246,9 +247,10 @@ REPO_TYPE           = ${REPO_TYPE}\n\
 NIGHTLY_BUILD       = ${NIGHTLY_BUILD}\n\
 \n\
 JOB_NAME            = ${JOB_NAME}\n\
+REPO_NAME           = ${REPO_NAME}\n\
 QUALIFIED_REPO_NAME = ${QUALIFIED_REPO_NAME}\n\
 JOB_QUALIFIER       = ${JOB_QUALIFIER}\n\
-REPO_NAME           = ${REPO_NAME}\n\
+JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
 "
 
                 sh '''set +x
@@ -267,13 +269,10 @@ REPO_NAME           = ${REPO_NAME}\n\
                     echo "> $cmd"
                     eval $cmd
 
-                    # Clone cross-compilation repo for myQLM
-                    if [[ ! $UI_PRODUCT =~ ^QLM$ || $JOB_QUALIFIER =~ client ]]; then
-                        echo -e "--> Cloning cross-compilation, branch=$BRANCH_NAME  [$GIT_BASE_URL] ..."
-                        cmd="git clone --single-branch --branch $BRANCH_NAME $GIT_BASE_URL/cross-compilation"
-                        echo "> $cmd"
-                        eval $cmd
-                    fi
+                    echo -e "--> Cloning cross-compilation, branch=$BRANCH_NAME  [$GIT_BASE_URL] ..."
+                    cmd="git clone --single-branch --branch $BRANCH_NAME $GIT_BASE_URL/cross-compilation"
+                    echo "> $cmd"
+                    eval $cmd
                 '''
                 script {
                     print "Loading build functions           ..."; build           = load "${QATDIR}/jenkins/methods/build"
@@ -298,91 +297,30 @@ REPO_NAME           = ${REPO_NAME}\n\
             } 
         }
 
-        stage("EL7")
+
+        stage("BUILD")
         {
             when {
                 expression {
-                    echo "${B_MAGENTA}********************* [[ EL7 ]] *********************${RESET}"
-                    return internal.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "EL7")
+                    echo "${B_MAGENTA}********************* [[ BUILD ]] *********************${RESET}"
+                    return internal.doit("$QUALIFIED_REPO_NAME", "BUILD")
                 }
                 beforeAgent true
             }
             agent {
                 docker {
                     label "${LABEL}"
-                    image "qlm-devel-${QLM_VERSION_FOR_DOCKER_IMAGE}-rhel7.8:latest"
+                    image "qlm-devel-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL}:latest"
                     args '-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v/etc/qlm/license:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools'
                     alwaysPull false
                     reuseNode true
                 } 
             }
             environment {
-                CURRENT_OS       = "el7"
                 CURRENT_PLATFORM = "linux" 
-                BUILD_DIR        = "build_${CURRENT_PLATFORM}_${CURRENT_OS}"
-                RUNTIME_DIR      = "$WORKSPACE/runtime_${CURRENT_PLATFORM}_${CURRENT_OS}"
-                INSTALL_DIR      = "$WORKSPACE/install_${CURRENT_PLATFORM}_${CURRENT_OS}"
-            }
-            stages
-            { 
-                stage("build") {
-                    steps {
-                        script {
-                            env.stage = "build"
-                            support.restore_tarballs_dependencies(env.stage)
-                            build.build()
-                            install.install()
-                        }
-                    }
-                }
-
-                stage("rpm") {
-                    when { expression { return internal.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "EL7", "$STAGE_NAME") } }
-                    steps {
-                        script {
-                            packaging.rpm()
-                        }
-                    }
-                }
-
-                stage("wheel") {
-                    when { expression { return internal.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "EL7", "$STAGE_NAME") } }
-                    environment {
-                        BUILD_DIR = "build_${CURRENT_PLATFORM}_${CURRENT_OS}"
-                    }
-                    steps {
-                        script {
-                            packaging.wheel()
-                        }
-                    }
-                }
-            }
-        }
-
-        stage("EL8")
-        {
-            when {
-                expression {
-                    echo "${B_MAGENTA}********************* [[ EL8 ]] *********************${RESET}"
-                    return internal.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "EL8")
-                }
-                beforeAgent true
-            }
-            agent {
-                docker {
-                    label "${LABEL}"
-                    image "qlm-devel-${QLM_VERSION_FOR_DOCKER_IMAGE}-rhel8.2:latest"
-                    args '-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v/etc/qlm/license:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools'
-                    alwaysPull false
-                    reuseNode true
-                } 
-            }
-            environment {
-                CURRENT_OS       = "el8"
-                CURRENT_PLATFORM = "linux" 
-                BUILD_DIR        = "build_${CURRENT_PLATFORM}_${CURRENT_OS}"
-                RUNTIME_DIR      = "$WORKSPACE/runtime_${CURRENT_PLATFORM}_${CURRENT_OS}"
-                INSTALL_DIR      = "$WORKSPACE/install_${CURRENT_PLATFORM}_${CURRENT_OS}"
+                BUILD_DIR        = "build_${CURRENT_PLATFORM}_${OS}"
+                RUNTIME_DIR      = "$WORKSPACE/runtime_${CURRENT_PLATFORM}_${OS}"
+                INSTALL_DIR      = "$WORKSPACE/install_${CURRENT_PLATFORM}_${OS}"
             }
             stages {
 	        stage("linguist") {
@@ -408,12 +346,12 @@ REPO_NAME           = ${REPO_NAME}\n\
                     when {
                         allOf {
                             expression { if (env.UI_TESTS.toLowerCase().contains("with code coverage")) { return true } else { return false } };
-                            expression { return internal.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "EL8", "$STAGE_NAME") }
+                            expression { return internal.doit("$QUALIFIED_REPO_NAME", "BUILD", "$STAGE_NAME") }
                         }
                     }
                     environment {
-                        BUILD_DIR   = "build-profiling_${CURRENT_PLATFORM}_${CURRENT_OS}"
-                        INSTALL_DIR = "$WORKSPACE/install-profiling_${CURRENT_PLATFORM}_${CURRENT_OS}"
+                        BUILD_DIR   = "build-profiling_${CURRENT_PLATFORM}_${OS}"
+                        INSTALL_DIR = "$WORKSPACE/install-profiling_${CURRENT_PLATFORM}_${OS}"
                     }
                     steps {
                         script {
@@ -426,7 +364,7 @@ REPO_NAME           = ${REPO_NAME}\n\
                 }
 
                 stage("rpm") {
-                    when { expression { return internal.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "EL8", "$STAGE_NAME") } }
+                    when { expression { return internal.doit("$QUALIFIED_REPO_NAME", "BUILD", "$STAGE_NAME") } }
                     steps {
                         script {
                             packaging.rpm()
@@ -435,9 +373,9 @@ REPO_NAME           = ${REPO_NAME}\n\
                 }
 
                 stage("wheel") {
-                    when { expression { return internal.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "EL8", "$STAGE_NAME") } }
+                    when { expression { return internal.doit("$QUALIFIED_REPO_NAME", "BUILD", "$STAGE_NAME") } }
                     environment {
-                        BUILD_DIR = "build_${CURRENT_PLATFORM}_${CURRENT_OS}"
+                        BUILD_DIR = "build_${CURRENT_PLATFORM}_${OS}"
                     }
                     steps {
                         script {
@@ -448,31 +386,34 @@ REPO_NAME           = ${REPO_NAME}\n\
             }
         }
 
+
         stage("CROSS-COMPILATION")
         {
             when {
-                expression {
-                    echo "${B_MAGENTA}********************* [[ CROSS-COMPILATION ]] *********************${RESET}"
-                    return internal.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "CROSS-COMPILATION")
+                allOf {
+                    expression {
+                        echo "${B_MAGENTA}********************* [[ CROSS-COMPILATION ]] *********************${RESET}"
+                        if (env.UI_OSVERSION.contains("8.2")) { return true } else { return false }
+                    };
+                    expression { return internal.doit("$QUALIFIED_REPO_NAME", "CROSS-COMPILATION") }
                 }
                 beforeAgent true
             }
             agent {
                 docker {
                     label "${LABEL}"
-                    image "qlm-devel-${QLM_VERSION_FOR_DOCKER_IMAGE}-rhel8.2:latest"
+                    image "qlm-devel-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL_CROSS_COMPILATION}:latest"
                     args '-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v/etc/qlm/license:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools'
                     alwaysPull false
                     reuseNode true
                 }
             }
             environment {
-                CURRENT_OS       = "el8"
                 CURRENT_PLATFORM = "win64" 
-                RUNTIME_DIR      = "$WORKSPACE/runtime_${CURRENT_PLATFORM}_${CURRENT_OS}"
+                RUNTIME_DIR      = "$WORKSPACE/runtime_${CURRENT_PLATFORM}_${OS}"
                 MYQLM_PLATFORM   = "WIN_64"
                 BUILD_DIR        = "build-${MYQLM_PLATFORM}"
-                INSTALL_DIR      = "$WORKSPACE/install_${CURRENT_PLATFORM}_${CURRENT_OS}"
+                INSTALL_DIR      = "$WORKSPACE/install_${CURRENT_PLATFORM}_${OS}"
             }
             stages {
                 stage("build") {
@@ -487,7 +428,7 @@ REPO_NAME           = ${REPO_NAME}\n\
                 }
 
                 stage("wheel") {
-                    when { expression { return internal.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "CROSS-COMPILATION", "$STAGE_NAME") } }
+                    when { expression { return internal.doit("$QUALIFIED_REPO_NAME", "CROSS-COMPILATION", "$STAGE_NAME") } }
                     steps {
                         script {
                             packaging.wheel_cross_compilation()
@@ -502,32 +443,31 @@ REPO_NAME           = ${REPO_NAME}\n\
             when {
                 expression {
                     echo "${B_MAGENTA}********************* [[ STATIC-ANALYSIS ]] *********************${RESET}"
-                    return internal.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "STATIC-ANALYSIS")
+                    return internal.doit("$QUALIFIED_REPO_NAME", "STATIC-ANALYSIS")
                 }
             }
             agent {
                 docker {
                     label "${LABEL}"
-                    image "qlm-devel-${QLM_VERSION_FOR_DOCKER_IMAGE}-rhel8.2:latest"
+                    image "qlm-devel-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL}:latest"
                     args '-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v/etc/qlm/license:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools'
                     alwaysPull false
                     reuseNode true
                 } 
             }
             environment {
-                CURRENT_OS       = "el8"
                 CURRENT_PLATFORM = "linux" 
-                RUNTIME_DIR      = "$WORKSPACE/runtime_${CURRENT_PLATFORM}_${CURRENT_OS}"
+                RUNTIME_DIR      = "$WORKSPACE/runtime_${CURRENT_PLATFORM}_${OS}"
             }
             stages {
                 stage("static-analysis") {
                     environment {
-                        BUILD_DIR = "build_${CURRENT_PLATFORM}_${CURRENT_OS}"
+                        BUILD_DIR = "build_${CURRENT_PLATFORM}_${OS}"
                     }
                     parallel
                     {
                         stage("cppcheck") {
-                            when { expression { return internal.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "STATIC-ANALYSIS", "$STAGE_NAME") } }
+                            when { expression { return internal.doit("$QUALIFIED_REPO_NAME", "STATIC-ANALYSIS", "$STAGE_NAME") } }
                             steps {
                                 script {
                                     static_analysis.cppcheck()
@@ -536,7 +476,7 @@ REPO_NAME           = ${REPO_NAME}\n\
                         }
              
                         stage("pylint") {
-                            when { expression { return internal.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "STATIC-ANALYSIS", "$STAGE_NAME") } }
+                            when { expression { return internal.doit("$QUALIFIED_REPO_NAME", "STATIC-ANALYSIS", "$STAGE_NAME") } }
                             steps {
                                 script {
                                     static_analysis.pylint()
@@ -545,7 +485,7 @@ REPO_NAME           = ${REPO_NAME}\n\
                         }
     
                         stage("flake8") {
-                            when { expression { return internal.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "STATIC-ANALYSIS", "$STAGE_NAME") } }
+                            when { expression { return internal.doit("$QUALIFIED_REPO_NAME", "STATIC-ANALYSIS", "$STAGE_NAME") } }
                             steps {
                                 script {
                                     static_analysis.flake8()
@@ -562,7 +502,7 @@ REPO_NAME           = ${REPO_NAME}\n\
             when {
                 expression {
                     echo "${B_MAGENTA}********************* [[ UNIT-TESTS ]] *********************${RESET}"
-                    return internal.doit("$UI_PRODUCT", "$QUALIFIED_REPO_NAME", "UNIT-TESTS")
+                    return internal.doit("$QUALIFIED_REPO_NAME", "UNIT-TESTS")
                 }
                 beforeAgent true
             }
@@ -576,11 +516,10 @@ REPO_NAME           = ${REPO_NAME}\n\
                 } 
             }
             environment {
-                CURRENT_OS                   = "$OS"
                 CURRENT_PLATFORM             = "linux" 
-                RUNTIME_DIR                  = "$WORKSPACE/runtime_${CURRENT_PLATFORM}_${CURRENT_OS}"
-                INSTALL_DIR                  = support.getenv("INSTALL_DIR", "${CURRENT_PLATFORM}", "${CURRENT_OS}")
-                BUILD_DIR                    = support.getenv("BUILD_DIR",   "${CURRENT_PLATFORM}", "${CURRENT_OS}")
+                RUNTIME_DIR                  = "$WORKSPACE/runtime_${CURRENT_PLATFORM}_${OS}"
+                INSTALL_DIR                  = support.getenv("INSTALL_DIR", "${CURRENT_PLATFORM}", "${OS}")
+                BUILD_DIR                    = support.getenv("BUILD_DIR",   "${CURRENT_PLATFORM}", "${OS}")
                 TESTS_REPORTS_DIR            = "$REPO_NAME/$BUILD_DIR/tests/reports"
                 TESTS_REPORTS_DIR_JUNIT      = "$TESTS_REPORTS_DIR/junit"
                 TESTS_REPORTS_DIR_GTEST      = "$TESTS_REPORTS_DIR/gtest"
@@ -614,6 +553,7 @@ REPO_NAME           = ${REPO_NAME}\n\
         success {
             echo "${B_MAGENTA}[POST:success]${RESET}"
             script {
+                packaging.publish_rpms()
                 sh '''set +x
                     rm -f tarballs_artifacts/.*.artifact 2>/dev/null
                 '''

@@ -28,7 +28,12 @@ try {
 }
 
 def OSLABEL                   = "rhel$UI_OSVERSION"
+
 def OSLABEL_CROSS_COMPILATION = "rhel8.2"
+def OS_CROSS_COMPILATION      = "el8"
+
+def OSLABEL_UNIT_TESTS_2      = "rhel8.2"
+def OS_UNIT_TESTS_2           = "el8"
 
 HOST_NAME = InetAddress.getLocalHost().getHostName()
 
@@ -390,12 +395,9 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
         stage("CROSS-COMPILATION")
         {
             when {
-                allOf {
-                    expression {
-                        echo "${B_MAGENTA}********************* [[ CROSS-COMPILATION ]] *********************${RESET}"
-                        if (env.UI_OSVERSION.contains("8.2")) { return true } else { return false }
-                    };
-                    expression { return internal.doit("$QUALIFIED_REPO_NAME", "CROSS-COMPILATION") }
+                expression {
+                    echo "${B_MAGENTA}********************* [[ CROSS-COMPILATION ]] *********************${RESET}"
+                    return internal.doit("$QUALIFIED_REPO_NAME", "CROSS-COMPILATION")
                 }
                 beforeAgent true
             }
@@ -410,6 +412,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
             }
             environment {
                 CURRENT_PLATFORM = "win64" 
+                OS               = "${OS_CROSS_COMPILATION}"
                 RUNTIME_DIR      = "$WORKSPACE/runtime_${CURRENT_PLATFORM}_${OS}"
                 MYQLM_PLATFORM   = "WIN_64"
                 BUILD_DIR        = "build-${MYQLM_PLATFORM}"
@@ -500,40 +503,90 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
         stage("UNIT-TESTS")
         {
             when {
-                expression {
-                    echo "${B_MAGENTA}********************* [[ UNIT-TESTS ]] *********************${RESET}"
-                    return internal.doit("$QUALIFIED_REPO_NAME", "UNIT-TESTS")
+                allOf {
+                    expression {
+                        echo "${B_MAGENTA}********************* [[ UNIT-TESTS ]] *********************${RESET}"
+                        if (env.UI_TESTS.toLowerCase().contains("skip")) { return false } else { return true }
+                    };
+                    expression { return internal.doit("$QUALIFIED_REPO_NAME", "UNIT-TESTS") }
                 }
-                beforeAgent true
-            }
-            agent {
-                docker {
-                    label "${LABEL}"
-                    image "qlm-devel-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL}:latest"
-                    args '-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v/etc/qlm/license:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools'
-                    alwaysPull false
-                    reuseNode true
-                } 
             }
             environment {
-                CURRENT_PLATFORM             = "linux" 
-                RUNTIME_DIR                  = "$WORKSPACE/runtime_${CURRENT_PLATFORM}_${OS}"
-                INSTALL_DIR                  = support.getenv("INSTALL_DIR", "${CURRENT_PLATFORM}", "${OS}")
-                BUILD_DIR                    = support.getenv("BUILD_DIR",   "${CURRENT_PLATFORM}", "${OS}")
-                TESTS_REPORTS_DIR            = "$REPO_NAME/$BUILD_DIR/tests/reports"
-                TESTS_REPORTS_DIR_JUNIT      = "$TESTS_REPORTS_DIR/junit"
-                TESTS_REPORTS_DIR_GTEST      = "$TESTS_REPORTS_DIR/gtest"
-                TESTS_REPORTS_DIR_CUNIT      = "$TESTS_REPORTS_DIR/cunit"
-                GTEST_OUTPUT                 = "xml:$WORKSPACE/$TESTS_REPORTS_DIR_GTEST/"
-                TESTS_REPORTS_DIR_VALGRIND   = "$TESTS_REPORTS_DIR/valgrind"
-                TESTS_REPORTS_DIR_COVERAGE   = "$TESTS_REPORTS_DIR/coverage"
-                TESTS_REPORTS_DIR_COVERAGEPY = "$REPO_NAME/${BUILD_DIR}/tests/htmlcov"
-                VALGRIND_ARGS                = "--fair-sched=no --child-silent-after-fork=yes --tool=memcheck --xml=yes --xml-file=$WORKSPACE/$TESTS_REPORTS_DIR_VALGRIND/report.xml --leak-check=full --show-leak-kinds=all --show-reachable=no --track-origins=yes --run-libc-freeres=no --gen-suppressions=all --suppressions=$QAT"
+                CURRENT_PLATFORM = "linux" 
             }
+
             stages {
-                stage("tests") {
-                    when { 
-                        expression { if (env.UI_TESTS.toLowerCase().contains("skip")) { return false } else { return true } }
+                stage("unit-tests-1") {
+                    when {
+                        expression {
+                            echo "${B_MAGENTA}--------------------- [[ UNIT-TESTS-1 ]] ---------------------${RESET}"
+                            return internal.doit("$QUALIFIED_REPO_NAME", "UNIT-TESTS", "UNIT-TESTS-1")
+                        }
+                        beforeAgent true
+                    }
+                    agent {
+                        docker {
+                            label "${LABEL}"
+                            image "qlm-devel-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL}:latest"
+                            args '-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v/etc/qlm/license:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools'
+                            alwaysPull false
+                            reuseNode true
+                        }
+                    }
+                    environment {
+                        RUNTIME_DIR                  = "$WORKSPACE/runtime_${CURRENT_PLATFORM}_${OS}"
+                        INSTALL_DIR                  = support.getenv("INSTALL_DIR", "${CURRENT_PLATFORM}", "${OS}")
+                        BUILD_DIR                    = support.getenv("BUILD_DIR",   "${CURRENT_PLATFORM}", "${OS}")
+                        TESTS_REPORTS_DIR            = "$REPO_NAME/$BUILD_DIR/tests/reports"
+                        TESTS_REPORTS_DIR_JUNIT      = "$TESTS_REPORTS_DIR/junit"
+                        TESTS_REPORTS_DIR_GTEST      = "$TESTS_REPORTS_DIR/gtest"
+                        TESTS_REPORTS_DIR_CUNIT      = "$TESTS_REPORTS_DIR/cunit"
+                        GTEST_OUTPUT                 = "xml:$WORKSPACE/$TESTS_REPORTS_DIR_GTEST/"
+                        TESTS_REPORTS_DIR_VALGRIND   = "$TESTS_REPORTS_DIR/valgrind"
+                        TESTS_REPORTS_DIR_COVERAGE   = "$TESTS_REPORTS_DIR/coverage"
+                        TESTS_REPORTS_DIR_COVERAGEPY = "$REPO_NAME/${BUILD_DIR}/tests/htmlcov"
+                        VALGRIND_ARGS                = "--fair-sched=no --child-silent-after-fork=yes --tool=memcheck --xml=yes --xml-file=$WORKSPACE/$TESTS_REPORTS_DIR_VALGRIND/report.xml --leak-check=full --show-leak-kinds=all --show-reachable=no --track-origins=yes --run-libc-freeres=no --gen-suppressions=all --suppressions=$QAT"
+                    }
+                    steps {
+                        script {
+                            env.stage = "tests"
+                            support.restore_tarballs_dependencies(env.stage)
+                            test.tests()
+                            test.tests_reporting()
+                        }
+                    }
+                }
+
+                stage("unit-tests-2") {
+                    when {
+                        expression {
+                            echo "${B_MAGENTA}--------------------- [[ UNIT-TESTS-2 ]] ---------------------${RESET}"
+                            return internal.doit("$QUALIFIED_REPO_NAME", "UNIT-TESTS", "UNIT-TESTS-2")
+                        }
+                        beforeAgent true
+                    }
+                    agent {
+                        docker {
+                            label "${LABEL}"
+                            image "qlm-devel-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL_UNIT_TESTS_2}:latest"
+                            args '-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v/etc/qlm/license:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools'
+                            alwaysPull false
+                            reuseNode true
+                        }
+                    }
+                    environment {
+                        RUNTIME_DIR                  = "$WORKSPACE/runtime_${CURRENT_PLATFORM}_${OS}"
+                        INSTALL_DIR                  = support.getenv("INSTALL_DIR", "${CURRENT_PLATFORM}", "${OS}")
+                        BUILD_DIR                    = support.getenv("BUILD_DIR",   "${CURRENT_PLATFORM}", "${OS}")
+                        TESTS_REPORTS_DIR            = "$REPO_NAME/$BUILD_DIR/tests/reports"
+                        TESTS_REPORTS_DIR_JUNIT      = "$TESTS_REPORTS_DIR/junit"
+                        TESTS_REPORTS_DIR_GTEST      = "$TESTS_REPORTS_DIR/gtest"
+                        TESTS_REPORTS_DIR_CUNIT      = "$TESTS_REPORTS_DIR/cunit"
+                        GTEST_OUTPUT                 = "xml:$WORKSPACE/$TESTS_REPORTS_DIR_GTEST/"
+                        TESTS_REPORTS_DIR_VALGRIND   = "$TESTS_REPORTS_DIR/valgrind"
+                        TESTS_REPORTS_DIR_COVERAGE   = "$TESTS_REPORTS_DIR/coverage"
+                        TESTS_REPORTS_DIR_COVERAGEPY = "$REPO_NAME/${BUILD_DIR}/tests/htmlcov"
+                        VALGRIND_ARGS                = "--fair-sched=no --child-silent-after-fork=yes --tool=memcheck --xml=yes --xml-file=$WORKSPACE/$TESTS_REPORTS_DIR_VALGRIND/report.xml --leak-check=full --show-leak-kinds=all --show-reachable=no --track-origins=yes --run-libc-freeres=no --gen-suppressions=all --suppressions=$QAT"
                     }
                     steps {
                         script {

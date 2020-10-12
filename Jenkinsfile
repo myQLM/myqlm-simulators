@@ -35,6 +35,8 @@ def OS_CROSS_COMPILATION      = "el8"
 def OSLABEL_UNIT_TESTS_2      = "rhel8.2"
 def OS_UNIT_TESTS_2           = "el8"
 
+// Exception: staticMethod java.net.InetAddress getLocalHost
+// Exception:       method java.net.InetAddress getHostName
 HOST_NAME = InetAddress.getLocalHost().getHostName()
 
 //UI_PRODUCT = "default"

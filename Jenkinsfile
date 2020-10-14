@@ -182,7 +182,7 @@ pipeline
         BUILD_TYPE = sh returnStdout: true, script: '''set +x
             build_type=debug
             [[ $BRANCH_NAME = rc ]] && build_type=release
-            echo -n build_type
+            echo -n $build_type
         '''
 
         REPO_TYPE = sh returnStdout: true, script: '''set +x
@@ -413,12 +413,14 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                 }
             }
             environment {
-                CURRENT_PLATFORM = "win64" 
                 OS               = "${OS_CROSS_COMPILATION}"
+                /*
+                MYQLM_PLATFORM   = "win64"
+                CURRENT_PLATFORM = "win64" 
                 RUNTIME_DIR      = "$WORKSPACE/runtime_${CURRENT_PLATFORM}_${OS}"
-                MYQLM_PLATFORM   = "WIN_64"
                 BUILD_DIR        = "build-${MYQLM_PLATFORM}"
                 INSTALL_DIR      = "$WORKSPACE/install_${CURRENT_PLATFORM}_${OS}"
+                */
             }
             stages {
                 stage("build") {

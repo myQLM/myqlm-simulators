@@ -28,6 +28,7 @@ try {
 }
 
 def OSLABEL                   = "rhel$UI_OSVERSION"
+def PY_VERSION                = "py36"
 
 def OSLABEL_CROSS_COMPILATION = "rhel8.2"
 def OS_CROSS_COMPILATION      = "el8"
@@ -317,7 +318,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
             agent {
                 docker {
                     label "${LABEL}"
-                    image "qlm-devel-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL}:latest"
+                    image "qlm-devel-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL}-${PY_VERSION}:latest"
                     args '-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v/etc/qlm/license:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools'
                     alwaysPull false
                     reuseNode true
@@ -406,7 +407,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
             agent {
                 docker {
                     label "${LABEL}"
-                    image "qlm-devel-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL_CROSS_COMPILATION}:latest"
+                    image "qlm-devel-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL_CROSS_COMPILATION}-${PY_VERSION}:latest"
                     args '-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v/etc/qlm/license:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools'
                     alwaysPull false
                     reuseNode true
@@ -456,7 +457,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
             agent {
                 docker {
                     label "${LABEL}"
-                    image "qlm-devel-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL}:latest"
+                    image "qlm-devel-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL}-${PY_VERSION}:latest"
                     args '-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v/etc/qlm/license:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools'
                     alwaysPull false
                     reuseNode true
@@ -531,7 +532,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                     agent {
                         docker {
                             label "${LABEL}"
-                            image "qlm-devel-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL}:latest"
+                            image "qlm-devel-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL}-${PY_VERSION}:latest"
                             args '-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v/etc/qlm/license:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools'
                             alwaysPull false
                             reuseNode true
@@ -572,7 +573,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                     agent {
                         docker {
                             label "${LABEL}"
-                            image "qlm-devel-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL_UNIT_TESTS_2}:latest"
+                            image "qlm-devel-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL_UNIT_TESTS_2}-${PY_VERSION}:latest"
                             args '-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v/etc/qlm/license:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools'
                             alwaysPull false
                             reuseNode true

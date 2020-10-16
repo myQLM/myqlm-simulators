@@ -302,7 +302,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
         {
             when {
                 expression {
-                    echo "${B_MAGENTA}********************* [[ BUILD ]] *********************${RESET}"
+                    echo "${B_MAGENTA}"; echo "BEGIN SECTION: BUILD1 BUILD2 BUILD3"; echo "${RESET}"
                     return internal.doit("$QUALIFIED_REPO_NAME", "BUILD")
                 }
                 beforeAgent true
@@ -334,21 +334,6 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                     }
                 }
 
-                stage("build-profiling") {
-                    when {
-                        allOf {
-                            expression { if (env.UI_TESTS.toLowerCase().contains("with code coverage")) { return true } else { return false } };
-                            expression { return internal.doit("$QUALIFIED_REPO_NAME", "BUILD", "$STAGE_NAME") }
-                        }
-                    }
-                    steps {
-                        script {
-                            build.build_profiling("${env.STAGE_NAME}", "${env.OS}")
-                            install.install_profiling("${env.OS}")
-                        }
-                    }
-                }
-
                 stage("rpm") {
                     when { expression { return internal.doit("$QUALIFIED_REPO_NAME", "BUILD", "$STAGE_NAME") } }
                     steps {
@@ -366,6 +351,22 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                         }
                     }
                 }
+
+                stage("build-profiling") {
+                    when {
+                        allOf {
+                            expression { if (env.UI_TESTS.toLowerCase().contains("with code coverage")) { return true } else { return false } };
+                            expression { return internal.doit("$QUALIFIED_REPO_NAME", "BUILD", "$STAGE_NAME") }
+                        }
+                    }
+                    steps {
+                        script {
+                            build.build_profiling("${env.OS}")
+                            install.install_profiling("${env.OS}")
+                        }
+                    }
+                }
+
             }
         }
 
@@ -374,7 +375,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
         {
             when {
                 expression {
-                    echo "${B_MAGENTA}********************* [[ CROSS-COMPILATION ]] *********************${RESET}"
+                    echo "${B_MAGENTA}"; echo "BEGIN SECTION: CROSS-COMPILATION1 CROSS-COMPILATION2 CROSS-COMPILATION3"; echo "${RESET}"
                     return internal.doit("$QUALIFIED_REPO_NAME", "CROSS-COMPILATION")
                 }
                 beforeAgent true
@@ -413,7 +414,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
         {
             when {
                 expression {
-                    echo "${B_MAGENTA}********************* [[ STATIC-ANALYSIS ]] *********************${RESET}"
+                    echo "${B_MAGENTA}"; echo "BEGIN SECTION: STATIC-ANALYSIS1 STATIC-ANALYSIS2 STATIC-ANALYSIS3"; echo "${RESET}"
                     return internal.doit("$QUALIFIED_REPO_NAME", "STATIC-ANALYSIS")
                 }
             }
@@ -466,7 +467,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
             when {
                 allOf {
                     expression {
-                        echo "${B_MAGENTA}********************* [[ UNIT-TESTS ]] *********************${RESET}"
+                        echo "${B_MAGENTA}"; echo "BEGIN SECTION: UNIT_TEST1 UNIT_TEST2 UNIT_TEST3"; echo "${RESET}"
                         if (env.UI_TESTS.toLowerCase().contains("skip")) { return false } else { return true }
                     };
                     expression { return internal.doit("$QUALIFIED_REPO_NAME", "UNIT-TESTS") }
@@ -561,7 +562,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
     post
     {
         success {
-            echo "${B_MAGENTA}[POST:success]${RESET}"
+            echo "${B_MAGENTA}\nEND SECTION\n[POST:success]${RESET}"
             script {
                 packaging.publish_rpms()
                 sh '''set +x

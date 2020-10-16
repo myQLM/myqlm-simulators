@@ -7,47 +7,22 @@
 // ---------------------------------------------------------------------------
 def QLM_VERSION_FOR_DOCKER_IMAGE = "1.1.0"
 
-// JOB_NAME:    qat-bdd | qat-bdd/master
-// UI_OSVERSION:    7.8 | 8.2
-// OS:              el7 | el8
-// OSLABEL:     rhel7.8 | rhel8.2
-// BRANCH_NAME:  master | rc
-
+// Jenkins master/slave
 def LABEL = "master"
 
-def OS
-try {
-    if ("$UI_OSVERSION".startsWith("7"))
-        OS = "el7"
-    else if ("$UI_OSVERSION".startsWith("8"))
-        OS = "el8"
+try {   // Use on new jobs
+    x = UI_OSVERSION
 } catch (e) {
     echo "***** UI_OSVERSION undefined; setting it to 8.2 *****"
     UI_OSVERSION = 8.2
-    OS = "el8"
 }
-
-def OSLABEL                   = "rhel$UI_OSVERSION"
-def PY_VERSION                = "py36"
-
-def OSLABEL_CROSS_COMPILATION = "rhel8.2"
-def OS_CROSS_COMPILATION      = "el8"
-
-def OSLABEL_UNIT_TESTS_2      = "rhel8.2"
-def OS_UNIT_TESTS_2           = "el8"
 
 // Exception: staticMethod java.net.InetAddress getLocalHost
 // Exception:       method java.net.InetAddress getHostName
-HOST_NAME = InetAddress.getLocalHost().getHostName()
-
-//UI_PRODUCT = "default"
-//if (params.UI_PRODUCT) UI_PRODUCT = params.UI_PRODUCT
-
-// Expose variables to bash and groovy functions
-env.OS            = "$OS"
-env.HOST_NAME     = "$HOST_NAME"
+HOST_NAME     = InetAddress.getLocalHost().getHostName()
+env.HOST_NAME = "$HOST_NAME"
+        
 env.NIGHTLY_BUILD = params.NIGHTLY_BUILD
-//env.UI_PRODUCT    = UI_PRODUCT
 
 
 // ---------------------------------------------------------------------------
@@ -180,6 +155,23 @@ pipeline
         BUILD_CAUSE      =  currentBuild.getBuildCauses()[0].shortDescription.toString()
         BUILD_CAUSE_NAME =  currentBuild.getBuildCauses()[0].userName.toString()
 
+        OS = sh returnStdout: true, script: '''set +x
+            if [[ $UI_OSVERSION =~ ^7 ]]; then
+                echo -n "el7"
+            else
+                echo -n "el8"
+            fi
+        '''
+        
+        OSLABEL                   = "rhel$UI_OSVERSION"
+        PY_VERSION                = "py36"
+        
+        OSLABEL_CROSS_COMPILATION = "rhel8.2"
+        OS_CROSS_COMPILATION      = "el8"
+        
+        OSLABEL_UNIT_TESTS_2      = "rhel8.2"
+        OS_UNIT_TESTS_2           = "el8"
+        
         BUILD_TYPE = sh returnStdout: true, script: '''set +x
             build_type=debug
             [[ $BRANCH_NAME = rc ]] && build_type=release
@@ -324,12 +316,6 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                     reuseNode true
                 } 
             }
-            environment {
-                CURRENT_PLATFORM = "linux" 
-                BUILD_DIR        = "build_${CURRENT_PLATFORM}_${OS}"
-                RUNTIME_DIR      = "$WORKSPACE/runtime_${CURRENT_PLATFORM}_${OS}"
-                INSTALL_DIR      = "$WORKSPACE/install_${CURRENT_PLATFORM}_${OS}"
-            }
             stages {
 	        stage("linguist") {
                     steps {
@@ -342,10 +328,8 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                 stage("build") {
                     steps {
                         script {
-                            env.stage = "build"
-                            support.restore_tarballs_dependencies(env.stage)
-                            build.build()
-                            install.install()
+                            build.build("${env.STAGE_NAME}", "${env.OS}")
+                            install.install("${env.OS}")
                         }
                     }
                 }
@@ -357,16 +341,10 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                             expression { return internal.doit("$QUALIFIED_REPO_NAME", "BUILD", "$STAGE_NAME") }
                         }
                     }
-                    environment {
-                        BUILD_DIR   = "build-profiling_${CURRENT_PLATFORM}_${OS}"
-                        INSTALL_DIR = "$WORKSPACE/install-profiling_${CURRENT_PLATFORM}_${OS}"
-                    }
                     steps {
                         script {
-                            env.stage = "build"
-                            support.restore_tarballs_dependencies(env.stage)
-                            build.build_profiling()
-                            install.install_profiling()
+                            build.build_profiling("${env.STAGE_NAME}", "${env.OS}")
+                            install.install_profiling("${env.OS}")
                         }
                     }
                 }
@@ -382,12 +360,9 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
 
                 stage("wheel") {
                     when { expression { return internal.doit("$QUALIFIED_REPO_NAME", "BUILD", "$STAGE_NAME") } }
-                    environment {
-                        BUILD_DIR = "build_${CURRENT_PLATFORM}_${OS}"
-                    }
                     steps {
                         script {
-                            packaging.wheel()
+                            packaging.wheel("${env.OS}")
                         }
                     }
                 }
@@ -413,24 +388,12 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                     reuseNode true
                 }
             }
-            environment {
-                OS               = "${OS_CROSS_COMPILATION}"
-                /*
-                MYQLM_PLATFORM   = "win64"
-                CURRENT_PLATFORM = "win64" 
-                RUNTIME_DIR      = "$WORKSPACE/runtime_${CURRENT_PLATFORM}_${OS}"
-                BUILD_DIR        = "build-${MYQLM_PLATFORM}"
-                INSTALL_DIR      = "$WORKSPACE/install_${CURRENT_PLATFORM}_${OS}"
-                */
-            }
             stages {
                 stage("build") {
                     steps {
                         script {
-                            env.stage = "build"
-                            support.restore_tarballs_dependencies(env.stage)
-                            build.build_cross_compilation()
-                            install.install_cross_compilation()
+                            build.build_cross_compilation("${env.STAGE_NAME}", "${env.OS}")
+                            install.install_cross_compilation("${env.OS}")
                         }
                     }
                 }
@@ -439,7 +402,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                     when { expression { return internal.doit("$QUALIFIED_REPO_NAME", "CROSS-COMPILATION", "$STAGE_NAME") } }
                     steps {
                         script {
-                            packaging.wheel_cross_compilation()
+                            packaging.wheel_cross_compilation("$OS")
                         }
                     }
                 }
@@ -463,15 +426,8 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                     reuseNode true
                 } 
             }
-            environment {
-                CURRENT_PLATFORM = "linux" 
-                RUNTIME_DIR      = "$WORKSPACE/runtime_${CURRENT_PLATFORM}_${OS}"
-            }
             stages {
                 stage("static-analysis") {
-                    environment {
-                        BUILD_DIR = "build_${CURRENT_PLATFORM}_${OS}"
-                    }
                     parallel
                     {
                         stage("cppcheck") {
@@ -516,10 +472,6 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                     expression { return internal.doit("$QUALIFIED_REPO_NAME", "UNIT-TESTS") }
                 }
             }
-            environment {
-                CURRENT_PLATFORM = "linux" 
-            }
-
             stages {
                 stage("unit-tests-1") {
                     when {
@@ -539,9 +491,9 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                         }
                     }
                     environment {
-                        RUNTIME_DIR                  = "$WORKSPACE/runtime_${CURRENT_PLATFORM}_${OS}"
-                        INSTALL_DIR                  = support.getenv("INSTALL_DIR", "${CURRENT_PLATFORM}", "${OS}")
-                        BUILD_DIR                    = support.getenv("BUILD_DIR",   "${CURRENT_PLATFORM}", "${OS}")
+                        RUNTIME_DIR                  = "$WORKSPACE/runtime_linux_${OS}_python36"
+                        INSTALL_DIR                  = support.getenv("INSTALL_DIR", "linux", "${OS}", "python36")
+                        BUILD_DIR                    = support.getenv("BUILD_DIR",   "linux", "${OS}", "python36")
                         TESTS_REPORTS_DIR            = "$REPO_NAME/$BUILD_DIR/tests/reports"
                         TESTS_REPORTS_DIR_JUNIT      = "$TESTS_REPORTS_DIR/junit"
                         TESTS_REPORTS_DIR_GTEST      = "$TESTS_REPORTS_DIR/gtest"
@@ -580,9 +532,9 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                         }
                     }
                     environment {
-                        RUNTIME_DIR                  = "$WORKSPACE/runtime_${CURRENT_PLATFORM}_${OS}"
-                        INSTALL_DIR                  = support.getenv("INSTALL_DIR", "${CURRENT_PLATFORM}", "${OS}")
-                        BUILD_DIR                    = support.getenv("BUILD_DIR",   "${CURRENT_PLATFORM}", "${OS}")
+                        RUNTIME_DIR                  = "$WORKSPACE/runtime_linux_${OS}"
+                        INSTALL_DIR                  = support.getenv("INSTALL_DIR", "linux", "${OS}")
+                        BUILD_DIR                    = support.getenv("BUILD_DIR",   "linux", "${OS}")
                         TESTS_REPORTS_DIR            = "$REPO_NAME/$BUILD_DIR/tests/reports"
                         TESTS_REPORTS_DIR_JUNIT      = "$TESTS_REPORTS_DIR/junit"
                         TESTS_REPORTS_DIR_GTEST      = "$TESTS_REPORTS_DIR/gtest"

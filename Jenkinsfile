@@ -183,7 +183,7 @@ pipeline
             if [[ $NIGHTLY_BUILD = true ]]; then
                 repo_type=mls
             else 
-                [[ $BRANCH_NAME != master ]] && repo_type=rc
+                [[ $BRANCH_NAME = rc ]] && repo_type=rc
             fi
             echo -n $repo_type
         '''
@@ -302,7 +302,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
         {
             when {
                 expression {
-                    echo "${B_MAGENTA}"; echo "BEGIN SECTION: BUILD1 BUILD2 BUILD3"; echo "${RESET}"
+                    echo "${B_MAGENTA}"; echo "END SECTION"; echo "BEGIN SECTION: BUILD"; echo "${RESET}"
                     return internal.doit("$QUALIFIED_REPO_NAME", "BUILD")
                 }
                 beforeAgent true
@@ -310,7 +310,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
             agent {
                 docker {
                     label "${LABEL}"
-                    image "qlm-devel-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL}-${PY_VERSION}:latest"
+                    image "qlm-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL}-${PY_VERSION}:latest"
                     args '-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v/etc/qlm/license:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools'
                     alwaysPull false
                     reuseNode true
@@ -375,7 +375,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
         {
             when {
                 expression {
-                    echo "${B_MAGENTA}"; echo "BEGIN SECTION: CROSS-COMPILATION1 CROSS-COMPILATION2 CROSS-COMPILATION3"; echo "${RESET}"
+                    echo "${B_MAGENTA}"; echo "END SECTION"; echo "BEGIN SECTION: CROSS_COMPILATION"; echo "${RESET}"
                     return internal.doit("$QUALIFIED_REPO_NAME", "CROSS-COMPILATION")
                 }
                 beforeAgent true
@@ -383,7 +383,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
             agent {
                 docker {
                     label "${LABEL}"
-                    image "qlm-devel-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL_CROSS_COMPILATION}-${PY_VERSION}:latest"
+                    image "qlm-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL_CROSS_COMPILATION}-${PY_VERSION}:latest"
                     args '-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v/etc/qlm/license:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools'
                     alwaysPull false
                     reuseNode true
@@ -414,14 +414,14 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
         {
             when {
                 expression {
-                    echo "${B_MAGENTA}"; echo "BEGIN SECTION: STATIC-ANALYSIS1 STATIC-ANALYSIS2 STATIC-ANALYSIS3"; echo "${RESET}"
+                    echo "${B_MAGENTA}"; echo "END SECTION"; echo "BEGIN SECTION: STATIC_ANALYSIS"; echo "${RESET}"
                     return internal.doit("$QUALIFIED_REPO_NAME", "STATIC-ANALYSIS")
                 }
             }
             agent {
                 docker {
                     label "${LABEL}"
-                    image "qlm-devel-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL}-${PY_VERSION}:latest"
+                    image "qlm-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL}-${PY_VERSION}:latest"
                     args '-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v/etc/qlm/license:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools'
                     alwaysPull false
                     reuseNode true
@@ -467,7 +467,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
             when {
                 allOf {
                     expression {
-                        echo "${B_MAGENTA}"; echo "BEGIN SECTION: UNIT_TEST1 UNIT_TEST2 UNIT_TEST3"; echo "${RESET}"
+                        echo "${B_MAGENTA}"; echo "END SECTION"; echo "BEGIN SECTION: UNIT_TEST"; echo "${RESET}"
                         if (env.UI_TESTS.toLowerCase().contains("skip")) { return false } else { return true }
                     };
                     expression { return internal.doit("$QUALIFIED_REPO_NAME", "UNIT-TESTS") }
@@ -485,7 +485,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                     agent {
                         docker {
                             label "${LABEL}"
-                            image "qlm-devel-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL}-${PY_VERSION}:latest"
+                            image "qlm-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL}-${PY_VERSION}:latest"
                             args '-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v/etc/qlm/license:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools'
                             alwaysPull false
                             reuseNode true
@@ -526,7 +526,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                     agent {
                         docker {
                             label "${LABEL}"
-                            image "qlm-devel-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL_UNIT_TESTS_2}-${PY_VERSION}:latest"
+                            image "qlm-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL_UNIT_TESTS_2}-${PY_VERSION}:latest"
                             args '-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v/etc/qlm/license:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools'
                             alwaysPull false
                             reuseNode true

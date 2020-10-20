@@ -21,7 +21,9 @@ try {   // Use on new jobs
 // Exception:       method java.net.InetAddress getHostName
 HOST_NAME     = InetAddress.getLocalHost().getHostName()
 env.HOST_NAME = "$HOST_NAME"
-        
+
+// Expose params to bash
+env.UI_PRODUCT    = params.UI_PRODUCT
 env.NIGHTLY_BUILD = params.NIGHTLY_BUILD
 
 
@@ -180,10 +182,12 @@ pipeline
 
         REPO_TYPE = sh returnStdout: true, script: '''set +x
             repo_type=dev
-            if [[ $NIGHTLY_BUILD = true ]]; then
-                repo_type=mls
-            else 
-                [[ $BRANCH_NAME = rc ]] && repo_type=rc
+            if [[ $UI_PRODUCT != null ]]; then          # Job was started from main
+                if [[ $BRANCH_NAME = rc ]]; then
+                    repo_type=rc
+                else
+                    repo_type=mls
+                fi
             fi
             echo -n $repo_type
         '''

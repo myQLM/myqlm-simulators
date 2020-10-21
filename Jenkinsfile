@@ -296,7 +296,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
         stage("versioning") {
             steps {
                 script {
-                    support.versioning()
+                    support.versioning(params.BUILD_DATE)
                 }
             } 
         }
@@ -562,6 +562,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
             }
         }
     } // stages
+
 
     post
     {

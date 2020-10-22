@@ -569,10 +569,17 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
         success {
             echo "${B_MAGENTA}\nEND SECTION\n[POST:success]${RESET}"
             script {
-                packaging.publish_rpms()
+                packaging.publish_rpms("success")
                 sh '''set +x
                     rm -f tarballs_artifacts/.*.artifact 2>/dev/null
                 '''
+            }
+        }
+
+        unstable {
+            echo "${B_MAGENTA}\nEND SECTION\n[POST:unstable]${RESET}"
+            script {
+                packaging.publish_rpms("unstable")
             }
         }
 

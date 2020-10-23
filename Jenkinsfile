@@ -259,8 +259,8 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
 
                 sh '''set +x
                     mkdir -p $REPO_NAME
-                    mv * $REPO_NAME/ 2>/dev/null  || true
-                    mv .* $REPO_NAME/ 2>/dev/null || true
+                    shopt -s dotglob
+                    mv  * $REPO_NAME/ 2>/dev/null || true
 
                     GIT_BASE_URL=ssh://bitbucketbdsfr.fsc.atos-services.net:7999/brq
                     if [[ $HOST_NAME =~ qlmci2 ]]; then
@@ -278,7 +278,35 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                     echo "> $cmd"
                     eval $cmd
                 '''
+
+                // Always restore the latest workspace of the opposite UI_VERSION in case it is needed
+                // to debug - it is not used by the current job
                 script {
+                    if (OS.contains("el7")) {
+                        copyArtifacts(
+                            filter: "el8.tgz",
+                            projectName: "${JOB_NAME}",
+                            flatten: false,
+                            fingerprintArtifacts: true,
+                            optional: true,
+                            selector: lastWithArtifacts(),
+                            parameters: "UI_OSVERSION=8.2"
+                        )
+                    } else if (OS.contains("el8")) {
+                        copyArtifacts(
+                            filter: "el7.tgz",
+                            projectName: "${JOB_NAME}",
+                            flatten: false,
+                            fingerprintArtifacts: true,
+                            optional: true,
+                            selector: lastWithArtifacts(),
+                            parameters: "UI_OSVERSION=7.8"
+                        )
+                    }
+                    sh '''set +x
+                        tar xfz el*.tgz 2>/dev/null || true
+                    '''
+
                     print "Loading build functions           ..."; build           = load "${QATDIR}/jenkins/methods/build"
                     print "Loading install functions         ..."; install         = load "${QATDIR}/jenkins/methods/install"
                     print "Loading internal functions        ..."; internal        = load "${QATDIR}/jenkins/methods/internal"
@@ -566,6 +594,19 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
 
     post
     {
+        always {
+            echo "${B_MAGENTA}[POST:always]${RESET}"
+            // Save the workspace
+            sh '''set +x
+                echo "Saving workspace..."
+                mkdir -p $OS/
+                shopt -s dotglob
+                shopt -s extglob
+                mv !(el*) $OS/ 2>/dev/null || true
+                tar cfz $OS.tgz $OS
+            '''
+            archiveArtifacts artifacts: "${OS}.tgz"
+        }
         success {
             echo "${B_MAGENTA}\nEND SECTION\n[POST:success]${RESET}"
             script {
@@ -583,16 +624,19 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
             }
         }
 
-        always {
-            echo "${B_MAGENTA}[POST:always]${RESET}"
+        cleanup {
+            echo "${B_MAGENTA}[POST:cleanup]${RESET}"
             script {
                 support.badges("post")
-                // Send emails only if not started by upstream (main)
-                if (!BUILD_CAUSE.contains("upstream")) {
+                if (!BUILD_CAUSE.contains("upstream")) {        // Send emails only if not started by upstream (main)
                     emailext body: "${BUILD_URL}",
                         recipientProviders: [[$class:'CulpritsRecipientProvider'],[$class:'RequesterRecipientProvider']],
                         subject: "${BUILD_TAG} - ${currentBuild.result}"
                 }
+                sh '''set +x
+                    # Remove the workspace tarballs
+                    rm -f el*.tgz
+                '''
             }
         }
     } // post

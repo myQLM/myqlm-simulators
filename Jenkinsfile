@@ -132,7 +132,7 @@ pipeline
     agent any 
     options {
         ansiColor('xterm')
-        timeout(time:30,unit:"MINUTES")
+        timeout(time:90,unit:"MINUTES")     // Large enough to count for semaphore if main is running
     }
 
     environment {
@@ -291,6 +291,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                     // Set a few badges for the build
                     support.badges()
 
+                    // Do not check for semaphore if the job was started from upstream (main)
                     if (!env.BUILD_CAUSE_NAME.contains("null")) {
                         lock('mainlock') {}
                     }

@@ -233,7 +233,7 @@ pipeline
             echo -n $job_name
         '''
     } 
-
+    
     stages
     {
         stage("init") {
@@ -290,6 +290,10 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
     
                     // Set a few badges for the build
                     support.badges()
+
+                    if (!env.BUILD_CAUSE_NAME.contains("null")) {
+                        lock('mainlock') {}
+                    }
                 }
             }
         }

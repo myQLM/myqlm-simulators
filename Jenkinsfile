@@ -130,12 +130,15 @@ properties([
 pipeline
 {
     agent any 
-    options {
+
+    options
+    {
         ansiColor('xterm')
         timeout(time:90,unit:"MINUTES")     // Large enough to count for semaphore if main is running
     }
 
-    environment {
+    environment
+    {
         RUN_BY_JENKINS=1
 
         BASEDIR           = "$WORKSPACE"
@@ -236,7 +239,8 @@ pipeline
     
     stages
     {
-        stage("init") {
+        stage("init")
+        {
             steps {
                 echo "${B_MAGENTA}[INIT]${RESET}"
                 echo "\
@@ -285,13 +289,13 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                     print "Loading internal functions        ..."; internal        = load "${QATDIR}/jenkins/methods/internal"
                     print "Loading packaging functions       ..."; packaging       = load "${QATDIR}/jenkins/methods/packaging"
                     print "Loading static_analysis functions ..."; static_analysis = load "${QATDIR}/jenkins/methods/static_analysis"
-                    print "Loading test functions            ..."; test            = load "${QATDIR}/jenkins/methods/tests"
                     print "Loading support functions         ..."; support         = load "${QATDIR}/jenkins/methods/support"
+                    print "Loading test functions            ..."; test            = load "${QATDIR}/jenkins/methods/tests"
     
                     // Set a few badges for the build
                     support.badges()
 
-                    // Do not check for semaphore if the job was started from upstream (main)
+                    // Do not check for semaphore if the job was started from upstream (main) to avoid a deadlock
                     if (!env.BUILD_CAUSE_NAME.contains("null")) {
                         lock('mainlock') {}
                     }
@@ -299,14 +303,14 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
             }
         }
 
-        stage("versioning") {
+        stage("versioning")
+        {
             steps {
                 script {
                     support.versioning(params.BUILD_DATE)
                 }
             } 
         }
-
 
         stage("BUILD")
         {
@@ -380,7 +384,6 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
             }
         }
 
-
         stage("CROSS-COMPILATION")
         {
             when {
@@ -437,8 +440,10 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                     reuseNode true
                 } 
             }
-            stages {
-                stage("static-analysis") {
+            stages
+            {
+                stage("static-analysis")
+                {
                     parallel
                     {
                         stage("cppcheck") {
@@ -483,7 +488,8 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                     expression { return internal.doit("$QUALIFIED_REPO_NAME", "UNIT-TESTS") }
                 }
             }
-            stages {
+            stages
+            {
                 stage("unit-tests-1") {
                     when {
                         expression {
@@ -525,7 +531,8 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                     }
                 }
 
-                stage("unit-tests-2") {
+                stage("unit-tests-2")
+                {
                     when {
                         expression {
                             echo "${B_MAGENTA}--------------------- [[ UNIT-TESTS-2 ]] ---------------------${RESET}"
@@ -572,11 +579,13 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
 
     post
     {
-        always {
+        always
+        {
             echo "${B_MAGENTA}[POST:always]${RESET}"
         }
 
-        success {
+        success
+        {
             echo "${B_MAGENTA}\nEND SECTION\n[POST:success]${RESET}"
             script {
                 packaging.publish_rpms("success")
@@ -586,14 +595,16 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
             }
         }
 
-        unstable {
+        unstable
+        {
             echo "${B_MAGENTA}\nEND SECTION\n[POST:unstable]${RESET}"
             script {
                 packaging.publish_rpms("unstable")
             }
         }
 
-        cleanup {
+        cleanup
+        {
             echo "${B_MAGENTA}[POST:cleanup]${RESET}"
             script {
                 support.badges("post")

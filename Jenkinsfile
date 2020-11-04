@@ -139,11 +139,11 @@ pipeline
 
     environment
     {
-        RUN_BY_JENKINS=1
+        RUN_BY_JENKINS = 1
 
-        BASEDIR           = "$WORKSPACE"
-        QATDIR            = "$BASEDIR/qat"
-        QAT_REPO_BASEDIR  = "$BASEDIR"
+        BASEDIR          = "$WORKSPACE"
+        QATDIR           = "$BASEDIR/qat"
+        QAT_REPO_BASEDIR = "$BASEDIR"
 
         BLACK   = '\033[30m' ; B_BLACK   = '\033[1;30m'
         RED     = '\033[31m' ; B_RED     = '\033[1;31m'
@@ -152,13 +152,13 @@ pipeline
         BLUE    = '\033[34m' ; B_BLUE    = '\033[1;34m'
         MAGENTA = '\033[35m' ; B_MAGENTA = '\033[1;35m'
         CYAN    = '\033[36m' ; B_CYAN    = '\033[1;36m'
-        WHITE   = '\033[97m' ;B_WHITE   = '\033[1;37m'
+        WHITE   = '\033[97m' ; B_WHITE   = '\033[1;37m'
 
         UNDERLINE = '\033[4m'
         RESET     = '\033[0m'
 
-        BUILD_CAUSE      =  currentBuild.getBuildCauses()[0].shortDescription.toString()
-        BUILD_CAUSE_NAME =  currentBuild.getBuildCauses()[0].userName.toString()
+        BUILD_CAUSE      = currentBuild.getBuildCauses()[0].shortDescription.toString()
+        BUILD_CAUSE_NAME = currentBuild.getBuildCauses()[0].userName.toString()
 
         OS = sh returnStdout: true, script: '''set +x
             if [[ $UI_OSVERSION =~ ^7 ]]; then
@@ -167,16 +167,16 @@ pipeline
                 echo -n "el8"
             fi
         '''
-        
+  
         OSLABEL                   = "rhel$UI_OSVERSION"
         PY_VERSION                = "py36"
-        
+  
         OSLABEL_CROSS_COMPILATION = "rhel8.2"
         OS_CROSS_COMPILATION      = "el8"
-        
+ 
         OSLABEL_UNIT_TESTS_2      = "rhel8.2"
         OS_UNIT_TESTS_2           = "el8"
-        
+ 
         BUILD_TYPE = sh returnStdout: true, script: '''set +x
             build_type=debug
             [[ $BRANCH_NAME = rc ]] && build_type=release
@@ -236,7 +236,7 @@ pipeline
             echo -n $job_name
         '''
     } 
-    
+   
     stages
     {
         stage("init")
@@ -581,14 +581,16 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
     {
         always
         {
+            echo "${B_MAGENTA}\nEND SECTION\n[POST:always]${RESET}"
             echo "${B_MAGENTA}[POST:always]${RESET}"
         }
 
         success
         {
-            echo "${B_MAGENTA}\nEND SECTION\n[POST:success]${RESET}"
+            echo "${B_MAGENTA}\n[POST:success]${RESET}"
             script {
                 packaging.publish_rpms("success")
+                packaging.publish_wheels("success")
                 sh '''set +x
                     rm -f tarballs_artifacts/.*.artifact 2>/dev/null
                 '''
@@ -597,9 +599,10 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
 
         unstable
         {
-            echo "${B_MAGENTA}\nEND SECTION\n[POST:unstable]${RESET}"
+            echo "${B_MAGENTA}\n[POST:unstable]${RESET}"
             script {
                 packaging.publish_rpms("unstable")
+                packaging.publish_wheels("unstable")
             }
         }
 

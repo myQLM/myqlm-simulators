@@ -524,7 +524,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                     steps {
                         script {
                             env.stage = "tests"
-                            support.restore_tarballs_dependencies(env.stage)
+                            support.restore_dependencies_tarballs(env.stage)
                             test.tests()
                             test.tests_reporting()
                         }

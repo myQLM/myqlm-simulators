@@ -525,7 +525,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                         script {
                             env.stage = "tests"
                             support.restore_dependencies_tarballs(env.stage)
-                            test.tests()
+                            test.tests("${env.OS}")
                             test.tests_reporting()
                         }
                     }
@@ -582,7 +582,6 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
         always
         {
             echo "${B_MAGENTA}\nEND SECTION\n[POST:always]${RESET}"
-            echo "${B_MAGENTA}[POST:always]${RESET}"
         }
 
         success

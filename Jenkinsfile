@@ -33,7 +33,7 @@ env.NIGHTLY_BUILD = params.NIGHTLY_BUILD
 //
 // ---------------------------------------------------------------------------
 properties([
-    [$class: 'JiraProjectProperty'], 
+    [$class: 'JiraProjectProperty'],
     [$class: 'EnvInjectJobProperty',
         info: [
             loadFilesFromMaster: false,
@@ -50,21 +50,21 @@ properties([
         keepJenkinsSystemVariables: true,
         on: true
     ],
-    buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '10', daysToKeepStr: '', numToKeepStr: '50')), 
-    disableConcurrentBuilds(), 
+    buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '10', daysToKeepStr: '', numToKeepStr: '50')),
+    disableConcurrentBuilds(),
     pipelineTriggers([pollSCM('')]),
     parameters([
         [$class: 'ChoiceParameter', choiceType: 'PT_SINGLE_SELECT', description: '', filterLength: 1, filterable: false, name: 'UI_VERSION', randomName: 'choice-parameter-266216487624195',
             script: [
                 $class: 'ScriptlerScript',
-                parameters: [ 
+                parameters: [
                     [$class: 'org.biouno.unochoice.model.ScriptlerScriptParameter', name: 'job_name',    value: "${JOB_NAME}"],
                     [$class: 'org.biouno.unochoice.model.ScriptlerScriptParameter', name: 'host_name',   value: "${HOST_NAME}"],
                     [$class: 'org.biouno.unochoice.model.ScriptlerScriptParameter', name: 'branch_name', value: "${BRANCH_NAME}"]
                 ],
                 scriptlerScriptId: 'ReturnNextVersions.groovy'
             ]
-        ], 
+        ],
         [$class: 'ChoiceParameter', choiceType: 'PT_RADIO', description: '', filterLength: 1, filterable: false, name: 'UI_OSVERSION', randomName: 'choice-parameter-744322351209535',
             script: [
                 $class: 'GroovyScript',
@@ -82,15 +82,15 @@ properties([
                 ]
             ]
         ],
-        [$class: 'ChoiceParameter', choiceType: 'PT_CHECKBOX', description: 'VERBOSE option for cmake', filterLength: 1, filterable: false, name: 'UI_VERBOSE', randomName: 'choice-parameter-2765756439171960', 
+        [$class: 'ChoiceParameter', choiceType: 'PT_CHECKBOX', description: 'VERBOSE option for cmake', filterLength: 1, filterable: false, name: 'UI_VERBOSE', randomName: 'choice-parameter-2765756439171960',
             script: [
-                $class: 'GroovyScript', 
+                $class: 'GroovyScript',
                 fallbackScript: [
                     classpath: [],
-                    sandbox: false, 
+                    sandbox: false,
                     script: '''
                     '''
-                ], 
+                ],
                 script: [
                     classpath: [],
                     sandbox: false,
@@ -100,7 +100,7 @@ properties([
                 ]
             ]
         ],
-        [$class: 'CascadeChoiceParameter', choiceType: 'PT_RADIO', description: '', filterLength: 1, filterable: false, name: 'UI_TESTS', randomName: 'choice-parameter-851409291728428', 
+        [$class: 'CascadeChoiceParameter', choiceType: 'PT_RADIO', description: '', filterLength: 1, filterable: false, name: 'UI_TESTS', randomName: 'choice-parameter-851409291728428',
             referencedParameters: 'UI_OSVERSION,BRANCH_NAME',
             script: [
                 $class: 'GroovyScript',
@@ -118,7 +118,7 @@ properties([
                 ]
             ]
         ]
-    ]) 
+    ])
 ])
 
 
@@ -129,7 +129,7 @@ properties([
 // ---------------------------------------------------------------------------
 pipeline
 {
-    agent any 
+    agent any
 
     options
     {
@@ -167,16 +167,16 @@ pipeline
                 echo -n "el8"
             fi
         '''
-  
+
         OSLABEL                   = "rhel$UI_OSVERSION"
         PY_VERSION                = "py36"
-  
+
         OSLABEL_CROSS_COMPILATION = "rhel8.2"
         OS_CROSS_COMPILATION      = "el8"
- 
+
         OSLABEL_UNIT_TESTS_2      = "rhel8.2"
         OS_UNIT_TESTS_2           = "el8"
- 
+
         BUILD_TYPE = sh returnStdout: true, script: '''set +x
             build_type=debug
             [[ $BRANCH_NAME = rc ]] && build_type=release
@@ -235,8 +235,8 @@ pipeline
             job_name=${job_name%%/*}
             echo -n $job_name
         '''
-    } 
-   
+    }
+
     stages
     {
         stage("init")
@@ -291,7 +291,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                     print "Loading static_analysis functions ..."; static_analysis = load "${QATDIR}/jenkins/methods/static_analysis.groovy"
                     print "Loading support functions         ..."; support         = load "${QATDIR}/jenkins/methods/support.groovy"
                     print "Loading test functions            ..."; test            = load "${QATDIR}/jenkins/methods/tests.groovy"
-    
+
                     // Set a few badges for the build
                     support.badges()
 
@@ -309,7 +309,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                 script {
                     support.versioning(params.BUILD_DATE)
                 }
-            } 
+            }
         }
 
         stage("BUILD36")
@@ -340,6 +340,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                 }
 
                 stage("build") {
+                    when { expression { return internal.doit("$QUALIFIED_REPO_NAME", "BUILD36", "$STAGE_NAME") } }
                     steps {
                         script {
                             build.build("${env.STAGE_NAME}", "${env.OS}")
@@ -400,10 +401,11 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                     args '-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v/etc/qlm/license:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools'
                     alwaysPull false
                     reuseNode true
-                } 
+                }
             }
             stages {
                 stage("build") {
+                    when { expression { return internal.doit("$QUALIFIED_REPO_NAME", "BUILD38", "$STAGE_NAME") } }
                     steps {
                         script {
                             build.build("${env.STAGE_NAME}", "${env.OS}")
@@ -422,7 +424,6 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                 }
             }
         }
-
 
         stage("CROSS-COMPILATION")
         {
@@ -478,7 +479,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                     args '-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v/etc/qlm/license:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools'
                     alwaysPull false
                     reuseNode true
-                } 
+                }
             }
             stages
             {
@@ -494,7 +495,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                                 }
                             }
                         }
-             
+
                         stage("pylint") {
                             when { expression { return internal.doit("$QUALIFIED_REPO_NAME", "STATIC-ANALYSIS", "$STAGE_NAME") } }
                             steps {
@@ -503,7 +504,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                                 }
                             }
                         }
-    
+
                         stage("flake8") {
                             when { expression { return internal.doit("$QUALIFIED_REPO_NAME", "STATIC-ANALYSIS", "$STAGE_NAME") } }
                             steps {
@@ -548,9 +549,9 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                         }
                     }
                     environment {
-                        RUNTIME_DIR                  = "$WORKSPACE/runtime_linux_${OS}_python36"
-                        INSTALL_DIR                  = support.getenv("INSTALL_DIR", "linux", "${OS}", "python36")
-                        BUILD_DIR                    = support.getenv("BUILD_DIR",   "linux", "${OS}", "python36")
+                        RUNTIME_DIR                  = "$WORKSPACE/runtime_linux_${env.OS}_python36"
+                        INSTALL_DIR                  = support.getenv("INSTALL_DIR", "linux", "${env.OS}", "python36")
+                        BUILD_DIR                    = support.getenv("BUILD_DIR",   "linux", "${env.OS}", "python36")
                         TESTS_REPORTS_DIR            = "$REPO_NAME/$BUILD_DIR/tests/reports"
                         TESTS_REPORTS_DIR_JUNIT      = "$TESTS_REPORTS_DIR/junit"
                         TESTS_REPORTS_DIR_GTEST      = "$TESTS_REPORTS_DIR/gtest"
@@ -590,9 +591,9 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                         }
                     }
                     environment {
-                        RUNTIME_DIR                  = "$WORKSPACE/runtime_linux_${OS}"
-                        INSTALL_DIR                  = support.getenv("INSTALL_DIR", "linux", "${OS}")
-                        BUILD_DIR                    = support.getenv("BUILD_DIR",   "linux", "${OS}")
+                        RUNTIME_DIR                  = "$WORKSPACE/runtime_linux_${env.OS}"
+                        INSTALL_DIR                  = support.getenv("INSTALL_DIR", "linux", "${env.OS}")
+                        BUILD_DIR                    = support.getenv("BUILD_DIR",   "linux", "${env.OS}")
                         TESTS_REPORTS_DIR            = "$REPO_NAME/$BUILD_DIR/tests/reports"
                         TESTS_REPORTS_DIR_JUNIT      = "$TESTS_REPORTS_DIR/junit"
                         TESTS_REPORTS_DIR_GTEST      = "$TESTS_REPORTS_DIR/gtest"
@@ -611,7 +612,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                             test.tests_reporting()
                         }
                     }
-                } 
+                }
             }
         }
     } // stages

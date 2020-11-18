@@ -284,13 +284,13 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                 '''
 
                 script {
-                    print "Loading build functions           ..."; build           = load "${QATDIR}/jenkins/methods/build"
-                    print "Loading install functions         ..."; install         = load "${QATDIR}/jenkins/methods/install"
-                    print "Loading internal functions        ..."; internal        = load "${QATDIR}/jenkins/methods/internal"
-                    print "Loading packaging functions       ..."; packaging       = load "${QATDIR}/jenkins/methods/packaging"
-                    print "Loading static_analysis functions ..."; static_analysis = load "${QATDIR}/jenkins/methods/static_analysis"
-                    print "Loading support functions         ..."; support         = load "${QATDIR}/jenkins/methods/support"
-                    print "Loading test functions            ..."; test            = load "${QATDIR}/jenkins/methods/tests"
+                    print "Loading build functions           ..."; build           = load "${QATDIR}/jenkins/methods/build.groovy"
+                    print "Loading install functions         ..."; install         = load "${QATDIR}/jenkins/methods/install.groovy"
+                    print "Loading internal functions        ..."; internal        = load "${QATDIR}/jenkins/methods/internal.groovy"
+                    print "Loading packaging functions       ..."; packaging       = load "${QATDIR}/jenkins/methods/packaging.groovy"
+                    print "Loading static_analysis functions ..."; static_analysis = load "${QATDIR}/jenkins/methods/static_analysis.groovy"
+                    print "Loading support functions         ..."; support         = load "${QATDIR}/jenkins/methods/support.groovy"
+                    print "Loading test functions            ..."; test            = load "${QATDIR}/jenkins/methods/tests.groovy"
     
                     // Set a few badges for the build
                     support.badges()
@@ -312,12 +312,12 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
             } 
         }
 
-        stage("BUILD")
+        stage("BUILD36")
         {
             when {
                 expression {
-                    echo "${B_MAGENTA}"; echo "END SECTION"; echo "BEGIN SECTION: BUILD"; echo "${RESET}"
-                    return internal.doit("$QUALIFIED_REPO_NAME", "BUILD")
+                    echo "${B_MAGENTA}"; echo "END SECTION"; echo "BEGIN SECTION: BUILD36"; echo "${RESET}"
+                    return internal.doit("$QUALIFIED_REPO_NAME", "BUILD36")
                 }
                 beforeAgent true
             }
@@ -328,10 +328,10 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                     args '-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v/etc/qlm/license:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools'
                     alwaysPull false
                     reuseNode true
-                } 
+                }
             }
             stages {
-	        stage("linguist") {
+                stage("linguist") {
                     steps {
                         script {
                             support.linguist()
@@ -349,7 +349,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                 }
 
                 stage("rpm") {
-                    when { expression { return internal.doit("$QUALIFIED_REPO_NAME", "BUILD", "$STAGE_NAME") } }
+                    when { expression { return internal.doit("$QUALIFIED_REPO_NAME", "BUILD36", "$STAGE_NAME") } }
                     steps {
                         script {
                             packaging.rpm()
@@ -358,7 +358,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                 }
 
                 stage("wheel") {
-                    when { expression { return internal.doit("$QUALIFIED_REPO_NAME", "BUILD", "$STAGE_NAME") } }
+                    when { expression { return internal.doit("$QUALIFIED_REPO_NAME", "BUILD36", "$STAGE_NAME") } }
                     steps {
                         script {
                             packaging.wheel("${env.OS}")
@@ -370,7 +370,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                     when {
                         allOf {
                             expression { if (env.UI_TESTS.toLowerCase().contains("with code coverage")) { return true } else { return false } };
-                            expression { return internal.doit("$QUALIFIED_REPO_NAME", "BUILD", "$STAGE_NAME") }
+                            expression { return internal.doit("$QUALIFIED_REPO_NAME", "BUILD36", "$STAGE_NAME") }
                         }
                     }
                     steps {
@@ -380,9 +380,49 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                         }
                     }
                 }
-
             }
         }
+
+
+        stage("BUILD38")
+        {
+            when {
+                expression {
+                    echo "${B_MAGENTA}"; echo "END SECTION"; echo "BEGIN SECTION: BUILD38"; echo "${RESET}"
+                    return internal.doit("$QUALIFIED_REPO_NAME", "BUILD38")
+                }
+                beforeAgent true
+            }
+            agent {
+                docker {
+                    label "${LABEL}"
+                    image "qlm-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL_CROSS_COMPILATION}-py38:latest"
+                    args '-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v/etc/qlm/license:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools'
+                    alwaysPull false
+                    reuseNode true
+                } 
+            }
+            stages {
+                stage("build") {
+                    steps {
+                        script {
+                            build.build("${env.STAGE_NAME}", "${env.OS}")
+                            install.install("${env.OS}")
+                        }
+                    }
+                }
+
+                stage("wheel") {
+                    when { expression { return internal.doit("$QUALIFIED_REPO_NAME", "BUILD38", "$STAGE_NAME") } }
+                    steps {
+                        script {
+                            packaging.wheel("${env.OS}")
+                        }
+                    }
+                }
+            }
+        }
+
 
         stage("CROSS-COMPILATION")
         {
@@ -416,7 +456,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                     when { expression { return internal.doit("$QUALIFIED_REPO_NAME", "CROSS-COMPILATION", "$STAGE_NAME") } }
                     steps {
                         script {
-                            packaging.wheel_cross_compilation("$OS")
+                            packaging.wheel_cross_compilation("${env.OS}")
                         }
                     }
                 }

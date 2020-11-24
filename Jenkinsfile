@@ -7,54 +7,24 @@
 // ---------------------------------------------------------------------------
 def QLM_VERSION_FOR_DOCKER_IMAGE = "1.1.0"
 
-//def REFERENCE_DOCKER = "yes"
-def REFERENCE_DOCKER = "no"
+// Jenkins master/slave
+def LABEL = "master"
 
-def OS
-def LABEL
-def OSLABEL
-def JOB_TYPE
-def DOCKER_IMAGE
-
-LABEL = "master"
-
-try {
-    if ("$UI_OSVERSION".startsWith("7"))
-        OS = "el7"
-    else if ("$UI_OSVERSION".startsWith("8"))
-        OS = "el8"
+try {   // Use on new jobs
+    x = UI_OSVERSION
 } catch (e) {
     echo "***** UI_OSVERSION undefined; setting it to 8.2 *****"
     UI_OSVERSION = 8.2
-    OS = "el8"
 }
 
-OSLABEL  = "rhel$UI_OSVERSION"
-if (!env.BRANCH_NAME) {
-    env.BRANCH_NAME = "master"
-}
-
-if ("$REFERENCE_DOCKER".contains("yes"))
-    DOCKER_IMAGE = "qlm-reference-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL}:latest"
-else
-    DOCKER_IMAGE = "qlm-devel-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL}:latest"
-
-HOST_NAME = InetAddress.getLocalHost().getHostName()
-
-// Expose OS to bash and groovy functions
-env.OS = "$OS"
+// Exception: staticMethod java.net.InetAddress getLocalHost
+// Exception:       method java.net.InetAddress getHostName
+HOST_NAME     = InetAddress.getLocalHost().getHostName()
 env.HOST_NAME = "$HOST_NAME"
 
-// Show the parameters
-echo "\
-JOB_NAME     = ${JOB_NAME}\n\
-BRANCH_NAME  = ${BRANCH_NAME}\n\
-JOB_BASE_NAME= ${JOB_BASE_NAME}\n\
-UI_OSVERSION = ${UI_OSVERSION}\n\
-OS           = ${OS}\n\
-OSLABEL      = ${OSLABEL}\n\
-DOCKER_IMAGE = ${DOCKER_IMAGE}\n\
-HOST_NAME    = ${HOST_NAME}"
+// Expose params to bash
+env.UI_PRODUCT    = params.UI_PRODUCT
+env.NIGHTLY_BUILD = params.NIGHTLY_BUILD
 
 
 // ---------------------------------------------------------------------------
@@ -80,7 +50,7 @@ properties([
         keepJenkinsSystemVariables: true,
         on: true
     ],
-    buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '25')),
+    buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '10', daysToKeepStr: '', numToKeepStr: '50')),
     disableConcurrentBuilds(),
     pipelineTriggers([pollSCM('')]),
     parameters([
@@ -112,6 +82,24 @@ properties([
                 ]
             ]
         ],
+        [$class: 'ChoiceParameter', choiceType: 'PT_CHECKBOX', description: 'VERBOSE option for cmake', filterLength: 1, filterable: false, name: 'UI_VERBOSE', randomName: 'choice-parameter-2765756439171960',
+            script: [
+                $class: 'GroovyScript',
+                fallbackScript: [
+                    classpath: [],
+                    sandbox: false,
+                    script: '''
+                    '''
+                ],
+                script: [
+                    classpath: [],
+                    sandbox: false,
+                    script: '''
+                        return ['']
+                    '''
+                ]
+            ]
+        ],
         [$class: 'CascadeChoiceParameter', choiceType: 'PT_RADIO', description: '', filterLength: 1, filterable: false, name: 'UI_TESTS', randomName: 'choice-parameter-851409291728428',
             referencedParameters: 'UI_OSVERSION,BRANCH_NAME',
             script: [
@@ -125,247 +113,508 @@ properties([
                     classpath: [],
                     sandbox: false,
                     script: '''
-                        def user = hudson.model.User.current()
-                        if ("$user" == "Jenkins")
-                            return ['Run tests', 'Skip tests:selected']
-                        else
-                            return ['Run tests:selected', 'Skip tests:disabled']
+                        return ['Run tests:selected', 'Run tests with code coverage', 'Skip tests']
                     '''
                 ]
             ]
         ]
-
     ])
 ])
 
 
 // ---------------------------------------------------------------------------
 //
-// Declarative pipeline
+// Pipeline
 //
 // ---------------------------------------------------------------------------
 pipeline
 {
-    agent {
-        docker {
-            label "${LABEL}"
-            image "${DOCKER_IMAGE}"
-            args '-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /opt/qlmtools:/opt/qlmtools -v /var/www/repos:/var/www/repos'
-            alwaysPull false
-        }
-    }
+    agent any
 
-    options {
+    options
+    {
         ansiColor('xterm')
+        timeout(time:90,unit:"MINUTES")     // Large enough to count for semaphore if main is running
     }
 
-    environment {
-        RUN_BY_JENKINS=1
+    environment
+    {
+        RUN_BY_JENKINS = 1
 
-        BASEDIR           = "$WORKSPACE"
-        QATDIR            = "$BASEDIR/qat"
-        QAT_REPO_BASEDIR  = "$BASEDIR"
-        INSTALL_DIR       = "$BASEDIR/install"
-        RUNTIME_DIR       = "$BASEDIR/runtime"
+        BASEDIR          = "$WORKSPACE"
+        QATDIR           = "$BASEDIR/qat"
+        QAT_REPO_BASEDIR = "$BASEDIR"
 
-        BLACK   = '\033[30m' ; B_BLACK   = '\033[40m'
-        RED     = '\033[31m' ; B_RED     = '\033[41m'
-        GREEN   = '\033[32m' ; B_GREEN   = '\033[42m'
-        YELLOW  = '\033[33m' ; B_YELLOW  = '\033[43m'
-        BLUE    = '\033[34m' ; B_BLUE    = '\033[44m'
-        MAGENTA = '\033[35m' ; B_MAGENTA = '\033[45m'
-        CYAN    = '\033[36m' ; B_CYAN    = '\033[46m'
-        WHITE   = '\033[97m' ; B_WHITE   = '\033[107m'
-        BOLD    = '\033[1m'  ; UNDERLINE = '\033[4m'
-        RESET   = '\033[0m'
+        BLACK   = '\033[30m' ; B_BLACK   = '\033[1;30m'
+        RED     = '\033[31m' ; B_RED     = '\033[1;31m'
+        GREEN   = '\033[32m' ; B_GREEN   = '\033[1;32m'
+        YELLOW  = '\033[33m' ; B_YELLOW  = '\033[1;33m'
+        BLUE    = '\033[34m' ; B_BLUE    = '\033[1;34m'
+        MAGENTA = '\033[35m' ; B_MAGENTA = '\033[1;35m'
+        CYAN    = '\033[36m' ; B_CYAN    = '\033[1;36m'
+        WHITE   = '\033[97m' ; B_WHITE   = '\033[1;37m'
 
-        BUILD_CAUSE      =  currentBuild.getBuildCauses()[0].shortDescription.toString()
-        BUILD_CAUSE_NAME =  currentBuild.getBuildCauses()[0].userName.toString()
+        UNDERLINE = '\033[4m'
+        RESET     = '\033[0m'
 
-        REPO_NAME = sh returnStdout: true, script: '''set +x
-            JOB_NAME=${JOB_NAME%%/*}
-            if [[ $JOB_NAME =~ ^qat-.*-.*$ ]]; then
-                echo -n ${JOB_NAME%-*}
+        BUILD_CAUSE      = currentBuild.getBuildCauses()[0].shortDescription.toString()
+        BUILD_CAUSE_NAME = currentBuild.getBuildCauses()[0].userName.toString()
+
+        OS = sh returnStdout: true, script: '''set +x
+            if [[ $UI_OSVERSION =~ ^7 ]]; then
+                echo -n "el7"
             else
-                echo -n $JOB_NAME
+                echo -n "el8"
             fi
         '''
-    } 
 
+        OSLABEL                   = "rhel$UI_OSVERSION"
+        PY_VERSION                = "py36"
+
+        OSLABEL_CROSS_COMPILATION = "rhel8.2"
+        OS_CROSS_COMPILATION      = "el8"
+
+        OSLABEL_UNIT_TESTS_2      = "rhel8.2"
+        OS_UNIT_TESTS_2           = "el8"
+
+        BUILD_TYPE = sh returnStdout: true, script: '''set +x
+            build_type=debug
+            [[ $BRANCH_NAME = rc ]] && build_type=release
+            echo -n $build_type
+        '''
+
+        REPO_TYPE = sh returnStdout: true, script: '''set +x
+            repo_type=dev
+            if [[ $UI_PRODUCT != null ]]; then          # Job was started from main
+                if [[ $BRANCH_NAME = rc ]]; then
+                    repo_type=rc
+                else
+                    repo_type=mls
+                fi
+            fi
+            echo -n $repo_type
+        '''
+
+        QUALIFIED_REPO_NAME = sh returnStdout: true, script: '''set +x
+            qualified_repo_name=${JOB_NAME%%/*}
+            echo -n $qualified_repo_name
+        '''
+
+        JOB_QUALIFIER = sh returnStdout: true, script: '''set +x
+            job_qualifier=${JOB_NAME#*-}
+            job_qualifier=${job_qualifier#*-}
+            n=${JOB_NAME//[^-]}
+            if ((${#n} > 1)); then
+                job_qualifier="${job_qualifier%%/*}"
+            else
+                job_qualifier='-'
+            fi
+            echo -n $job_qualifier
+        '''
+
+        JOB_QUALIFIER_PATH = sh returnStdout: true, script: '''set +x
+            job_qualifier=${JOB_NAME#*-}
+            job_qualifier=${job_qualifier#*-}
+            n=${JOB_NAME//[^-]}
+            if ((${#n} > 1)); then
+                job_qualifier="/${job_qualifier%%/*}"
+            else
+                job_qualifier='-'
+            fi
+            job_qualifier_path="${job_qualifier//-//}"
+            echo -n $job_qualifier_path
+        '''
+
+        REPO_NAME = sh returnStdout: true, script: '''set +x
+            job_name=$JOB_NAME
+            if [[ ! $job_name =~ qat-functional-tests && \
+                    $job_name =~ ^qat-.*-.*$ ]]; then
+                job_name=${job_name%-*}
+                [[ $job_name =~ ^qat-.*-.*$ ]] && job_name=${job_name%-*}
+            fi
+            job_name=${job_name%%/*}
+            echo -n $job_name
+        '''
+    }
 
     stages
     {
-        stage('Init')
+        stage("init")
         {
             steps {
-                echo "${MAGENTA}${BOLD}[INIT]${RESET}"
+                echo "${B_MAGENTA}[INIT]${RESET}"
                 echo "\
-BASEDIR           = ${BASEDIR}\n\
-QATDIR            = ${QATDIR}\n\
-QAT_REPO_BASEDIR  = ${QAT_REPO_BASEDIR}\n\
-INSTALL_DIR       = ${INSTALL_DIR}\n\
-RUNTIME_DIR       = ${RUNTIME_DIR}\n\
-BUILD_CAUSE       = ${BUILD_CAUSE}\n\
-BUILD_CAUSE_NAME  = ${BUILD_CAUSE_NAME}\n\
-REPO_NAME         = ${REPO_NAME}\n\
+BASEDIR             = ${BASEDIR}\n\
+QATDIR              = ${QATDIR}\n\
+QAT_REPO_BASEDIR    = ${QAT_REPO_BASEDIR}\n\
+\n\
+BUILD_CAUSE         = ${BUILD_CAUSE}\n\
+BUILD_CAUSE_NAME    = ${BUILD_CAUSE_NAME}\n\
+\n\
+REPO_TYPE           = ${REPO_TYPE}\n\
+NIGHTLY_BUILD       = ${NIGHTLY_BUILD}\n\
+\n\
+JOB_NAME            = ${JOB_NAME}\n\
+REPO_NAME           = ${REPO_NAME}\n\
+QUALIFIED_REPO_NAME = ${QUALIFIED_REPO_NAME}\n\
+JOB_QUALIFIER       = ${JOB_QUALIFIER}\n\
+JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
 "
 
                 sh '''set +x
                     mkdir -p $REPO_NAME
-                    mv * $REPO_NAME/ 2>/dev/null  || true
-                    mv .* $REPO_NAME/ 2>/dev/null || true
+                    shopt -s dotglob
+                    mv  * $REPO_NAME/ 2>/dev/null || true
 
-                    ATOS_GIT_BASE_URL=ssh://bitbucketbdsfr.fsc.atos-services.net:7999/brq
+                    GIT_BASE_URL=ssh://bitbucketbdsfr.fsc.atos-services.net:7999/brq
                     if [[ $HOST_NAME =~ qlmci2 ]]; then
-                        ATOS_GIT_BASE_URL=ssh://qlmjenkins@qlmgit.usrnd.lan:29418/qlm
+                        GIT_BASE_URL=ssh://qlmjenkins@qlmgit.usrnd.lan:29418/qlm
                     fi
 
                     # Clone qat repo
-                    echo -e "--> Cloning qat, branch=$BRANCH_NAME  [$ATOS_GIT_BASE_URL] ..."
-                    cmd="git clone --single-branch --branch $BRANCH_NAME $ATOS_GIT_BASE_URL/qat"
+                    echo -e "--> Cloning qat, branch=$BRANCH_NAME  [$GIT_BASE_URL] ..."
+                    cmd="git clone --single-branch --branch $BRANCH_NAME $GIT_BASE_URL/qat"
                     echo "> $cmd"
                     eval $cmd
 
-                    # Install wheels dependencies
-                    if [[ $REPO_NAME = myqlm-interop ]]; then
-                        sudo pip3 install -r $WORKSPACE/qat/share/misc/myqlm-interop-requirements.txt || true
-                    fi
+                    echo -e "--> Cloning cross-compilation, branch=$BRANCH_NAME  [$GIT_BASE_URL] ..."
+                    cmd="git clone --single-branch --branch $BRANCH_NAME $GIT_BASE_URL/cross-compilation"
+                    echo "> $cmd"
+                    eval $cmd
                 '''
+
                 script {
-                    // Load groovy support functions
-                    print "Loading groovy support functions ..."
-                    support_functions = load "${QATDIR}/bin/jenkins_support_functions.groovy"
+                    print "Loading build functions           ..."; build           = load "${QATDIR}/jenkins/methods/build.groovy"
+                    print "Loading install functions         ..."; install         = load "${QATDIR}/jenkins/methods/install.groovy"
+                    print "Loading internal functions        ..."; internal        = load "${QATDIR}/jenkins/methods/internal.groovy"
+                    print "Loading packaging functions       ..."; packaging       = load "${QATDIR}/jenkins/methods/packaging.groovy"
+                    print "Loading static_analysis functions ..."; static_analysis = load "${QATDIR}/jenkins/methods/static_analysis.groovy"
+                    print "Loading support functions         ..."; support         = load "${QATDIR}/jenkins/methods/support.groovy"
+                    print "Loading test functions            ..."; test            = load "${QATDIR}/jenkins/methods/tests.groovy"
 
                     // Set a few badges for the build
-                    print "Setting up badges ..."
-                    support_functions.badges()
-                }
-            }
-        } // Init
+                    support.badges()
 
-
-        stage('Versioning')
-        {
-            steps {
-                echo "${MAGENTA}${BOLD}[VERSIONING]${RESET}"
-                script {
-                    MYQLM_VERSION = sh returnStdout: true, script: '''set +x
-                        if [[ -r qat/share/versions/$REPO_NAME.version ]]; then
-                            MYQLM_VERSION="$(cat qat/share/versions/$REPO_NAME.version)"
-                        else
-                            echo -e "\n**** No qat/share/versions/$REPO_NAME.version file"
-                            exit 1
-                        fi
-                        echo -n $MYQLM_VERSION
-                    '''
-                    env.MYQLM_VERSION="$MYQLM_VERSION"
-                    echo "(wheel) -> ${MYQLM_VERSION}"
-                }
-                sh '''set +x
-                    sed -i "s/version=.*/version=\\"$MYQLM_VERSION\\",/" $WORKSPACE/$REPO_NAME/setup.py
-                '''
-                buildName "${MYQLM_VERSION}.${BUILD_NUMBER}"
-            }
-        } // Versioning
-
-
-        stage('Install')
-        {
-            steps {
-                echo "${MAGENTA}${BOLD}[INSTALL]${RESET}"
-                script {
-                    sh '''set +x
-                        source /usr/local/bin/qatenv
-                        mkdir -p $INSTALL_DIR/lib64/python3.6/site-packages/
-                        cmd="cp -r ${REPO_NAME}/qat $INSTALL_DIR/lib64/python3.6/site-packages/"
-                        echo -e "\n> $cmd"
-                        $cmd
-
-                        # Save the artifact(s)
-                        echo -e "\nCreating ${REPO_NAME}-${MYQLM_VERSION}.${BUILD_NUMBER}.${OS}.tar.gz"
-                        cd $INSTALL_DIR && tar cfz $WORKSPACE/${REPO_NAME}-${MYQLM_VERSION}.${BUILD_NUMBER}.${OS}.tar.gz .
-                    '''
-                    archiveArtifacts artifacts: "${REPO_NAME}-${MYQLM_VERSION}.${BUILD_NUMBER}.${OS}.tar.gz", onlyIfSuccessful: true
-                }
-            }
-        } // Install
-
-
-        stage('Tests-dependencies')
-        {
-            when {
-                expression { if (env.UI_TESTS.toLowerCase().contains("skip")) { return false } else { return true } }
-            }
-            steps {
-                echo "${MAGENTA}${BOLD}[TESTS-DEPENDENCIES]${RESET}"
-                script {
-                    support_functions.restore_dependencies_install_dir()
-                }
-            }
-        } // Tests-dependencies
-
-
-        stage('Tests')
-        {
-            when {
-                expression { if (env.UI_TESTS.toLowerCase().contains("skip")) { return false } else { return true } }
-            }
-            environment {
-                INSTALL_DIR                 = "$WORKSPACE/install"
-                TESTS_REPORTS_DIR           = "$REPO_NAME/tests/reports"
-                TESTS_REPORTS_DIR_JUNIT     = "$TESTS_REPORTS_DIR/junit"
-                TESTS_REPORTS_DIR_GTEST     = "$TESTS_REPORTS_DIR/gtest"
-                TESTS_REPORTS_DIR_CUNIT     = "$TESTS_REPORTS_DIR/cunit"
-                GTEST_OUTPUT                = "xml:$WORKSPACE/$TESTS_REPORTS_DIR_GTEST/"
-                TESTS_REPORTS_DIR_COVERAGE  = "$TESTS_REPORTS_DIR/coverage"
-                TESTS_REPORTS_DIR_VALGRIND  = "$TESTS_REPORTS_DIR/valgrind"
-                VALGRIND_ARGS               = "--fair-sched=no --child-silent-after-fork=yes --tool=memcheck --xml=yes --xml-file=$WORKSPACE/$TESTS_REPORTS_DIR_VALGRIND/report.xml --leak-check=full --show-leak-kinds=all --show-reachable=no --track-origins=yes --run-libc-freeres=no --gen-suppressions=all --suppressions=$QATDIR/share/misc/valgrind.supp"
-            }
-            steps {
-                echo "${MAGENTA}${BOLD}[TESTS]${RESET}"
-                script {
-                    catchError(buildResult: 'UNSTABLE', stageResult: 'UNSTABLE') {
-                        sh '''set +x
-                            source /usr/local/bin/qatenv
-                            cp qat/share/misc/pytest.ini $REPO_NAME/tests 2>/dev/null
-                            mkdir -p $WORKSPACE/$TESTS_REPORTS_DIR_JUNIT
-                            cd $REPO_NAME/tests
-                            cmd="python3 -m pytest -v --junitxml=reports/junit/report.xml ."
-                            echo -e "\n> $cmd"
-                            $cmd
-                        '''
+                    // Do not check for semaphore if the job was started from upstream (main) to avoid a deadlock
+                    if (!env.BUILD_CAUSE_NAME.contains("null")) {
+                        lock('mainlock') {}
                     }
-                    support_functions.tests_reporting()
                 }
             }
-        } // Tests
+        }
 
-
-        stage("WHEEL")
+        stage("versioning")
         {
             steps {
-                echo "${MAGENTA}${BOLD}[WHEEL]${RESET}"
                 script {
-                    sh '''set +x
-                        source /usr/local/bin/qatenv
-                        cd $WORKSPACE/$REPO_NAME
-
-                        echo -e "\n${CYAN}Building myQLM wheels...${RESET}"
-                        cmd="$PYTHON setup.py bdist_wheel"
-                        echo -e "\n> ${GREEN}$cmd${RESET}"
-                        $cmd
- 
-                        echo -e "\n\n${MAGENTA}WHEEL packaged files list${RESET}"
-                        find dist -type f -exec echo -e "$BLUE"{}"${RESET}" \\; -exec unzip -l {} \\;
-    
-                        echo -e "\n\n${MAGENTA}METADATA file${RESET}"
-                        find dist -type f -exec unzip -p {} ${REPO_NAME//-/_}-$MYQLM_VERSION.dist-info/METADATA \\;
-                    '''
-                    // Save the source tarball and wheel artifacts
-                    archiveArtifacts artifacts: "${REPO_NAME}/dist/*.whl", onlyIfSuccessful: true
+                    support.versioning(params.BUILD_DATE)
                 }
             }
-        } // wheel
+        }
+
+        stage("BUILD36")
+        {
+            when {
+                expression {
+                    echo "${B_MAGENTA}"; echo "END SECTION"; echo "BEGIN SECTION: BUILD36"; echo "${RESET}"
+                    return internal.doit("$QUALIFIED_REPO_NAME", "BUILD36")
+                }
+                beforeAgent true
+            }
+            agent {
+                docker {
+                    label "${LABEL}"
+                    image "qlm-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL}-${PY_VERSION}:latest"
+                    args '-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v/etc/qlm/license:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools'
+                    alwaysPull false
+                    reuseNode true
+                }
+            }
+            stages {
+                stage("linguist") {
+                    steps {
+                        script {
+                            support.linguist()
+                        }
+                    }
+                }
+
+                stage("build") {
+                    when { expression { return internal.doit("$QUALIFIED_REPO_NAME", "BUILD36", "$STAGE_NAME") } }
+                    steps {
+                        script {
+                            build.build("${env.STAGE_NAME}", "${env.OS}")
+                            install.install("${env.OS}")
+                        }
+                    }
+                }
+
+                stage("rpm") {
+                    when { expression { return internal.doit("$QUALIFIED_REPO_NAME", "BUILD36", "$STAGE_NAME") } }
+                    steps {
+                        script {
+                            packaging.rpm()
+                        }
+                    }
+                }
+
+                stage("wheel") {
+                    when { expression { return internal.doit("$QUALIFIED_REPO_NAME", "BUILD36", "$STAGE_NAME") } }
+                    steps {
+                        script {
+                            packaging.wheel("${env.OS}")
+                        }
+                    }
+                }
+
+                stage("build-profiling") {
+                    when {
+                        allOf {
+                            expression { if (env.UI_TESTS.toLowerCase().contains("with code coverage")) { return true } else { return false } };
+                            expression { return internal.doit("$QUALIFIED_REPO_NAME", "BUILD36", "$STAGE_NAME") }
+                        }
+                    }
+                    steps {
+                        script {
+                            build.build_profiling("${env.OS}")
+                            install.install_profiling("${env.OS}")
+                        }
+                    }
+                }
+            }
+        }
+
+
+        stage("BUILD38")
+        {
+            when {
+                expression {
+                    echo "${B_MAGENTA}"; echo "END SECTION"; echo "BEGIN SECTION: BUILD38"; echo "${RESET}"
+                    return internal.doit("$QUALIFIED_REPO_NAME", "BUILD38")
+                }
+                beforeAgent true
+            }
+            agent {
+                docker {
+                    label "${LABEL}"
+                    image "qlm-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL_CROSS_COMPILATION}-py38:latest"
+                    args '-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v/etc/qlm/license:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools'
+                    alwaysPull false
+                    reuseNode true
+                }
+            }
+            stages {
+                stage("build") {
+                    when { expression { return internal.doit("$QUALIFIED_REPO_NAME", "BUILD38", "$STAGE_NAME") } }
+                    steps {
+                        script {
+                            build.build("${env.STAGE_NAME}", "${env.OS}")
+                            install.install("${env.OS}")
+                        }
+                    }
+                }
+
+                stage("wheel") {
+                    when { expression { return internal.doit("$QUALIFIED_REPO_NAME", "BUILD38", "$STAGE_NAME") } }
+                    steps {
+                        script {
+                            packaging.wheel("${env.OS}")
+                        }
+                    }
+                }
+            }
+        }
+
+        stage("CROSS-COMPILATION")
+        {
+            when {
+                expression {
+                    echo "${B_MAGENTA}"; echo "END SECTION"; echo "BEGIN SECTION: CROSS_COMPILATION"; echo "${RESET}"
+                    return internal.doit("$QUALIFIED_REPO_NAME", "CROSS-COMPILATION")
+                }
+                beforeAgent true
+            }
+            agent {
+                docker {
+                    label "${LABEL}"
+                    image "qlm-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL_CROSS_COMPILATION}-${PY_VERSION}:latest"
+                    args '-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v/etc/qlm/license:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools'
+                    alwaysPull false
+                    reuseNode true
+                }
+            }
+            stages {
+                stage("build") {
+                    steps {
+                        script {
+                            build.build_cross_compilation("${env.STAGE_NAME}", "${env.OS}")
+                            install.install_cross_compilation("${env.OS}")
+                        }
+                    }
+                }
+
+                stage("wheel") {
+                    when { expression { return internal.doit("$QUALIFIED_REPO_NAME", "CROSS-COMPILATION", "$STAGE_NAME") } }
+                    steps {
+                        script {
+                            packaging.wheel_cross_compilation("${env.OS}")
+                        }
+                    }
+                }
+            }
+        }
+
+        stage("STATIC-ANALYSIS")
+        {
+            when {
+                expression {
+                    echo "${B_MAGENTA}"; echo "END SECTION"; echo "BEGIN SECTION: STATIC_ANALYSIS"; echo "${RESET}"
+                    return internal.doit("$QUALIFIED_REPO_NAME", "STATIC-ANALYSIS")
+                }
+            }
+            agent {
+                docker {
+                    label "${LABEL}"
+                    image "qlm-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL}-${PY_VERSION}:latest"
+                    args '-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v/etc/qlm/license:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools'
+                    alwaysPull false
+                    reuseNode true
+                }
+            }
+            stages
+            {
+                stage("static-analysis")
+                {
+                    parallel
+                    {
+                        stage("cppcheck") {
+                            when { expression { return internal.doit("$QUALIFIED_REPO_NAME", "STATIC-ANALYSIS", "$STAGE_NAME") } }
+                            steps {
+                                script {
+                                    static_analysis.cppcheck()
+                                }
+                            }
+                        }
+
+                        stage("pylint") {
+                            when { expression { return internal.doit("$QUALIFIED_REPO_NAME", "STATIC-ANALYSIS", "$STAGE_NAME") } }
+                            steps {
+                                script {
+                                    static_analysis.pylint()
+                                }
+                            }
+                        }
+
+                        stage("flake8") {
+                            when { expression { return internal.doit("$QUALIFIED_REPO_NAME", "STATIC-ANALYSIS", "$STAGE_NAME") } }
+                            steps {
+                                script {
+                                    static_analysis.flake8()
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        stage("UNIT-TESTS")
+        {
+            when {
+                allOf {
+                    expression {
+                        echo "${B_MAGENTA}"; echo "END SECTION"; echo "BEGIN SECTION: UNIT_TEST"; echo "${RESET}"
+                        if (env.UI_TESTS.toLowerCase().contains("skip")) { return false } else { return true }
+                    };
+                    expression { return internal.doit("$QUALIFIED_REPO_NAME", "UNIT-TESTS") }
+                }
+            }
+            stages
+            {
+                stage("unit-tests-1") {
+                    when {
+                        expression {
+                            echo "${B_MAGENTA}--------------------- [[ UNIT-TESTS-1 ]] ---------------------${RESET}"
+                            return internal.doit("$QUALIFIED_REPO_NAME", "UNIT-TESTS", "UNIT-TESTS-1")
+                        }
+                        beforeAgent true
+                    }
+                    agent {
+                        docker {
+                            label "${LABEL}"
+                            image "qlm-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL}-${PY_VERSION}:latest"
+                            args '-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v/etc/qlm/license:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools'
+                            alwaysPull false
+                            reuseNode true
+                        }
+                    }
+                    environment {
+                        RUNTIME_DIR                  = "$WORKSPACE/runtime_linux_${env.OS}_python36"
+                        INSTALL_DIR                  = support.getenv("INSTALL_DIR", "linux", "${env.OS}", "python36")
+                        BUILD_DIR                    = support.getenv("BUILD_DIR",   "linux", "${env.OS}", "python36")
+                        TESTS_REPORTS_DIR            = "$REPO_NAME/$BUILD_DIR/tests/reports"
+                        TESTS_REPORTS_DIR_JUNIT      = "$TESTS_REPORTS_DIR/junit"
+                        TESTS_REPORTS_DIR_GTEST      = "$TESTS_REPORTS_DIR/gtest"
+                        TESTS_REPORTS_DIR_CUNIT      = "$TESTS_REPORTS_DIR/cunit"
+                        GTEST_OUTPUT                 = "xml:$WORKSPACE/$TESTS_REPORTS_DIR_GTEST/"
+                        TESTS_REPORTS_DIR_VALGRIND   = "$TESTS_REPORTS_DIR/valgrind"
+                        TESTS_REPORTS_DIR_COVERAGE   = "$TESTS_REPORTS_DIR/coverage"
+                        TESTS_REPORTS_DIR_COVERAGEPY = "$REPO_NAME/${BUILD_DIR}/tests/htmlcov"
+                        VALGRIND_ARGS                = "--fair-sched=no --child-silent-after-fork=yes --tool=memcheck --xml=yes --xml-file=$WORKSPACE/$TESTS_REPORTS_DIR_VALGRIND/report.xml --leak-check=full --show-leak-kinds=all --show-reachable=no --track-origins=yes --run-libc-freeres=no --gen-suppressions=all --suppressions=$QAT"
+                    }
+                    steps {
+                        script {
+                            env.stage = "tests"
+                            support.restore_dependencies_tarballs(env.stage)
+                            test.tests("${env.OS}")
+                            test.tests_reporting()
+                        }
+                    }
+                }
+
+                stage("unit-tests-2")
+                {
+                    when {
+                        expression {
+                            echo "${B_MAGENTA}--------------------- [[ UNIT-TESTS-2 ]] ---------------------${RESET}"
+                            return internal.doit("$QUALIFIED_REPO_NAME", "UNIT-TESTS", "UNIT-TESTS-2")
+                        }
+                        beforeAgent true
+                    }
+                    agent {
+                        docker {
+                            label "${LABEL}"
+                            image "qlm-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL_UNIT_TESTS_2}-${PY_VERSION}:latest"
+                            args '-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v/etc/qlm/license:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools'
+                            alwaysPull false
+                            reuseNode true
+                        }
+                    }
+                    environment {
+                        RUNTIME_DIR                  = "$WORKSPACE/runtime_linux_${env.OS}"
+                        INSTALL_DIR                  = support.getenv("INSTALL_DIR", "linux", "${env.OS}")
+                        BUILD_DIR                    = support.getenv("BUILD_DIR",   "linux", "${env.OS}")
+                        TESTS_REPORTS_DIR            = "$REPO_NAME/$BUILD_DIR/tests/reports"
+                        TESTS_REPORTS_DIR_JUNIT      = "$TESTS_REPORTS_DIR/junit"
+                        TESTS_REPORTS_DIR_GTEST      = "$TESTS_REPORTS_DIR/gtest"
+                        TESTS_REPORTS_DIR_CUNIT      = "$TESTS_REPORTS_DIR/cunit"
+                        GTEST_OUTPUT                 = "xml:$WORKSPACE/$TESTS_REPORTS_DIR_GTEST/"
+                        TESTS_REPORTS_DIR_VALGRIND   = "$TESTS_REPORTS_DIR/valgrind"
+                        TESTS_REPORTS_DIR_COVERAGE   = "$TESTS_REPORTS_DIR/coverage"
+                        TESTS_REPORTS_DIR_COVERAGEPY = "$REPO_NAME/${BUILD_DIR}/tests/htmlcov"
+                        VALGRIND_ARGS                = "--fair-sched=no --child-silent-after-fork=yes --tool=memcheck --xml=yes --xml-file=$WORKSPACE/$TESTS_REPORTS_DIR_VALGRIND/report.xml --leak-check=full --show-leak-kinds=all --show-reachable=no --track-origins=yes --run-libc-freeres=no --gen-suppressions=all --suppressions=$QAT"
+                    }
+                    steps {
+                        script {
+                            env.stage = "tests"
+                            support.restore_tarballs_dependencies(env.stage)
+                            test.tests()
+                            test.tests_reporting()
+                        }
+                    }
+                }
+            }
+        }
     } // stages
 
 
@@ -373,20 +622,42 @@ REPO_NAME         = ${REPO_NAME}\n\
     {
         always
         {
-            echo "${MAGENTA}${BOLD}[POST]${RESET}"
+            echo "${B_MAGENTA}\nEND SECTION\n[POST:always]${RESET}"
+        }
+
+        success
+        {
+            echo "${B_MAGENTA}\n[POST:success]${RESET}"
             script {
+                packaging.publish_rpms("success")
+                packaging.publish_wheels("success")
                 sh '''set +x
                     rm -f tarballs_artifacts/.*.artifact 2>/dev/null
                 '''
-                // Send emails only if not started by upstream (qat pipeline)
-                if (!BUILD_CAUSE.contains("upstream")) {
-                    emailext body:
-                        "${BUILD_URL}",
+            }
+        }
+
+        unstable
+        {
+            echo "${B_MAGENTA}\n[POST:unstable]${RESET}"
+            script {
+                packaging.publish_rpms("unstable")
+                packaging.publish_wheels("unstable")
+            }
+        }
+
+        cleanup
+        {
+            echo "${B_MAGENTA}[POST:cleanup]${RESET}"
+            script {
+                support.badges("post")
+                if (!BUILD_CAUSE.contains("upstream")) {        // Send emails only if not started by upstream (main)
+                    emailext body: "${BUILD_URL}",
                         recipientProviders: [[$class:'CulpritsRecipientProvider'],[$class:'RequesterRecipientProvider']],
                         subject: "${BUILD_TAG} - ${currentBuild.result}"
                 }
             }
-        } // always
+        }
     } // post
 } // pipeline
 

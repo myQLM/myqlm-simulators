@@ -46,7 +46,7 @@ def simulate(circuit):
         intermediate measurements:
             - state vector: :code:`numpy.ndarray` containing the final
               state vector. It has one 2-valued index per qubits.
-            - intermediate measurements: :obj:`list` of :class:`qat.comm.shared.ttypes.IntermediateMeasurement`. List containing descriptors of the intermediate measurements that occurred within the circuit, so that the classical branching is known to the user.
+            - intermediate measurements: :code:`list` of :class:`qat.comm.shared.ttypes.IntermediateMeasurement`. List containing descriptors of the intermediate measurements that occurred within the circuit, so that the classical branching is known to the user.
     """
     # Initialization at |0...0>
     shape = tuple([2 for _ in range(circuit.nbqbits)])
@@ -143,7 +143,7 @@ def measure(state_vec, qubits, nb_samples=1):
     Thanks to the absence of projection, several samples can be asked.
 
     Args:
-        state_vec (numpy.ndarray): the :class:`numpy.ndarray`
+        state_vec (numpy.ndarray): the :code:`numpy.ndarray`
             containing full state vector.
         qubits (list): list of integers specifying the subset
             of qubits to measure.
@@ -337,7 +337,7 @@ def mat2nparray(matrix):
 
     Args:
         matrix (:code:`qat.comm.datamodel.ttypes.Matrix`): The matrix, as extracted
-            rom circuit operation, to convert to :class:`numpy.ndarray`
+            from circuit operation, to convert to :code:`numpy.ndarray`
 
     Returns:
         numpy.ndarray: a :code:`numpy.ndarray` of shape (2*arity,2*arity) containing

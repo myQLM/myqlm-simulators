@@ -50,10 +50,10 @@ class PyLinalg(QPUHandler):
         of a Job
 
         Args:
-            job (:class:`~qat.core.wrappers.Job`): the job to execute
+            job (:class:`~qat.core.Job`): the job to execute
 
         Returns:
-            :class:`~qat.core.wrappers.Result`: the result
+            :class:`~qat.core.Result`: the result
         """
         if not isinstance(job.circuit, WCircuit):
             job.circuit = WCircuit(job.circuit)

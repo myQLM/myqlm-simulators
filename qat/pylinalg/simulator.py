@@ -33,19 +33,20 @@ def simulate(circuit):
     """
     Computes state vector at the output of provided circuit.
 
-    State vector is stored as a :class:`numpy.ndarray`
+    State vector is stored as a :code:`numpy.ndarray`
     It is initialized at :math:`|0^n\\rangle`.
     Then, loop over gates, updating the state vector using `np.tensordot`
 
     Args:
-        circuit (:class:`qat.comm.datamodel.ttypes.Circuit`): Input circuit. The
+        circuit (:class:`~qat.core.Circuit`): Input circuit. The
             circuit to simulate.
 
     Returns:
-        :obj:`tuple`: a tuple: state_vec, interm_measurements.
-            - state_vec: :class:`numpy.ndarray` containing the final
+        tuple: a tuple composed of a state vector and
+        intermediate measurements:
+            - state vector: :code:`numpy.ndarray` containing the final
               state vector. It has one 2-valued index per qubits.
-            - interm_measurements: :obj:`list` of :class:`qat.comm.shared_types.IntermediateMeasurement`. List containing descriptors of the intermediate measurements that occurred within the circuit, so that the classical branching is known to the user.
+            - intermediate measurements: :code:`list` of :class:`qat.comm.shared.ttypes.IntermediateMeasurement`. List containing descriptors of the intermediate measurements that occurred within the circuit, so that the classical branching is known to the user.
     """
     # Initialization at |0...0>
     shape = tuple([2 for _ in range(circuit.nbqbits)])
@@ -142,15 +143,15 @@ def measure(state_vec, qubits, nb_samples=1):
     Thanks to the absence of projection, several samples can be asked.
 
     Args:
-        state_vec (:class:`numpy.ndarray`): the :class:`numpy.ndarray`
+        state_vec (numpy.ndarray): the :code:`numpy.ndarray`
             containing full state vector.
-        qubits (:obj:`list`): list of integers specifying the subset
+        qubits (list): list of integers specifying the subset
             of qubits to measure.
-        nb_samples (:obj:`int`, optional): the number of samples to return. Set to 1
+        nb_samples (int, optional): the number of samples to return. Set to 1
             by default.
 
     Returns:
-        :obj:`list`: **intprob_list**, a list (of length nb_samples) containing tuples of the form (integer, probability). The integer is the result of the measurement on the subset of qubits (when converted to binary representation, it needs to have a width of len(qubits)). The probability is the probability the measurement had to occur. It is useful for renormalizing afterwards.
+        list: **intprob_list**, a list (of length nb_samples) containing tuples of the form (integer, probability). The integer is the result of the measurement on the subset of qubits (when converted to binary representation, it needs to have a width of len(qubits)). The probability is the probability the measurement had to occur. It is useful for renormalizing afterwards.
         In short: it is a list of samples. One sample is a (int, prob) tuple.
     """
     probs = np.abs(state_vec**2)  # full probability vector
@@ -190,18 +191,18 @@ def project(state_vec, qubits, intprob):
     (i.e within measure and reset gates)
 
     Args:
-        state_vec (:class:`numpy.ndarray`): The state vector to project, i.e the
+        state_vec (numpy.ndarray): The state vector to project, i.e the
             one from which the results were sampled.
-        qubits (:obj:`list`): The qubits that were measured, presented as a list
+        qubits (list): The qubits that were measured, presented as a list
             of integers. Without this info, we don't know to what axes the result
             corresponds.
-        intprob (:obj:`tuple`): a tuple of the form (integer, probability). The
+        intprob (tuple): a tuple of the form (integer, probability). The
             integer codes for the value that was measured on the qubits in the list
             "qubits". The probability that the measurement had to occur. It is
             useful for renormalizing without having to recompute a norm.
 
     Returns:
-        :class:`numpy.ndarray`: The projected state vector. The values of the qubits in the "qubits" list have been assigned to the measured values.
+        numpy.ndarray: The projected state vector. The values of the qubits in the "qubits" list have been assigned to the measured values.
 
     """
     all_qubits = [k for k in range(len(state_vec.shape))]  # explicit name
@@ -227,16 +228,19 @@ def reset(state_vec, qubits):
 
     for one qubit, entirely equivalent to, in AQASM:
 
-    | MEAS q[k] c[k]
-    | ?c[k] : X q[k]
+    .. code-block:: text
+
+        MEAS q[k] c[k]
+        ?c[k] : X q[k]
 
     Args:
-        state_vec (:class:`numpy.ndarray`): nd-array containing the full state
+        state_vec (numpy.ndarray): nd-array containing the full state
             vector.
-        qubits (:obj:`list`): list of integers, containing the qubits to reset.
+        qubits (list): list of integers, containing the qubits to reset.
 
     Returns:
-        (state_vec, int, prob): a tuple composed of:
+        (state_vec, int, prob): a tuple composed
+        of:
             - state_vec(`numpy.ndarray`) the full state vector. the specified qubits
               have been reset.
             - an integer: result of the measurement on the subset of qubits (when
@@ -329,19 +333,19 @@ def mat2nparray(matrix):
 
     When extracted from the quantum circuit, gate matrices are not
     directly numpy arrays. They are instances of
-    :class:`qat.comm.datamodel.Matrix`, an internally-defined structure.
+    :code:`Matrix`, an internally-defined structure.
 
     Args:
-        matrix (:class:`qat.comm.datamodel.Matrix`): The matrix, as extracted
-            rom circuit operation, to convert to :class:`numpy.ndarray`
+        matrix (:code:`qat.comm.datamodel.ttypes.Matrix`): The matrix, as extracted
+            from circuit operation, to convert to :code:`numpy.ndarray`
 
     Returns:
-        :class:`numpy.ndarray` : a :class:`numpy.ndarray` of shape (2*arity,2*arity) containing
+        numpy.ndarray: a :code:`numpy.ndarray` of shape (2*arity,2*arity) containing
         the matrix data.
 
-    Notes:
-        It could directly return a :class:`numpy.ndarray` of the shape we
-        use in :func:`numpy.tensordot`, but as quantum gates are typically
+    .. notes:
+        It could directly return a :code:`numpy.ndarray` of the shape we
+        use in :code:`numpy.tensordot()`, but as quantum gates are typically
         represented as matrices, we kept this step.
 
     """

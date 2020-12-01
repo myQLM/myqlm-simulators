@@ -5,7 +5,7 @@
 // GROOVY GLOBALS
 //
 // ---------------------------------------------------------------------------
-def QLM_VERSION_FOR_DOCKER_IMAGE = "1.1.0"
+def QLM_VERSION_FOR_DOCKER_IMAGE = "1.2.0"
 
 // Jenkins master/slave
 def LABEL = "master"
@@ -272,13 +272,13 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                     fi
 
                     # Clone qat repo
-                    echo -e "--> Cloning qat, branch=$BRANCH_NAME  [$GIT_BASE_URL] ..."
-                    cmd="git clone --single-branch --branch $BRANCH_NAME $GIT_BASE_URL/qat"
+                    echo -e "--> Cloning qat, branch=master  [$GIT_BASE_URL] ..."
+                    cmd="git clone --single-branch --branch master $GIT_BASE_URL/qat"
                     echo "> $cmd"
                     eval $cmd
 
-                    echo -e "--> Cloning cross-compilation, branch=$BRANCH_NAME  [$GIT_BASE_URL] ..."
-                    cmd="git clone --single-branch --branch $BRANCH_NAME $GIT_BASE_URL/cross-compilation"
+                    echo -e "--> Cloning cross-compilation, branch=master  [$GIT_BASE_URL] ..."
+                    cmd="git clone --single-branch --branch master $GIT_BASE_URL/cross-compilation"
                     echo "> $cmd"
                     eval $cmd
                 '''
@@ -307,7 +307,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
         {
             steps {
                 script {
-                    support.versioning(params.BUILD_DATE)
+                    support.versioning(params.BUILD_DATE, params.UI_PRODUCT_VERSION)
                 }
             }
         }

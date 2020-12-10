@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -*- coding : utf-8 -*-
 
 """
     Licensed to the Apache Software Foundation (ASF) under one
@@ -19,6 +19,4 @@
     under the License.
 """
 
-from qat.pylinalg import PyLinalg
-from qat.simulated_annealing import SimulatedAnnealing
-
+from .service import SimulatedAnnealing, integer_to_spins

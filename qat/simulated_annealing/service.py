@@ -66,9 +66,11 @@ class SimulatedAnnealing(QPUHandler):
         self.temp_t = temp_t
 
         # Check if a positive n_steps was given
-        if n_steps is not None:
+        if n_steps is None:
+            raise ValueError("The number of steps should be specified and as a positive integer.")
+        else:
             if n_steps < 0:
-                raise ValueError("Please use a positive integer  number of steps.")
+                raise ValueError("The number of steps should be specified and as a positive integer.")
         self.n_steps = n_steps
 
         # Check if a positive seed was given
@@ -121,7 +123,7 @@ class SimulatedAnnealing(QPUHandler):
                                "an Ising tuple and coefficient 1.")
 
         # Extract the Ising parameters and tmax
-        J_coupling, h_mag, offset = extract_params_from_obs(drive[0][1])
+        J_coupling, h_mag, offset = extract_j_and_h_from_obs(drive[0][1])
         tmax = job.schedule.tmax
 
         # Specify the list of annealing times
@@ -133,7 +135,7 @@ class SimulatedAnnealing(QPUHandler):
         else:
             temp_list = [self.temp_t for t in time_list]
 
-        # Will appeand QRegister to the result for nice printing of the states
+        # Will appeand QRegister to the result for proper dealing with the states
         qreg = QRegister(0, length=job.schedule.nbqbits)
 
         # Now give all the annealing parameters to the sa solver and get an answer
@@ -189,7 +191,7 @@ class SimulatedAnnealing(QPUHandler):
         return spin_conf 
 
 
-def extract_params_from_obs(obs):
+def extract_j_and_h_from_obs(obs):
     """
     A function to extract the :math:`J` coupling matrix, magnetic field
     :math:`h` and Ising energy offset :math:`E_I` from the Hamiltonian of an Ising 
@@ -233,7 +235,7 @@ def extract_params_from_obs(obs):
                                        "accepting terms of type 'Z' or 'ZZ', "
                                        "got %s instead" % term)
 
-    return 1.0 * (J_coupling + J_coupling.T), h_mag, obs.constant_coeff  
+    return 1.0 * (J_coupling + J_coupling.T), h_mag, -obs.constant_coeff  
 
 
 def spins_to_integer(solution_configuration):
@@ -251,6 +253,7 @@ def spins_to_integer(solution_configuration):
     integer = 0
     for spin_position in range(len(solution_configuration)):
         spin = solution_configuration[spin_position]
+
         # mapping -1 to 1 and 1 to 0
         if spin == -1:
             integer += 2**(len(solution_configuration) - spin_position - 1)
@@ -274,19 +277,8 @@ def integer_to_spins(integer, n_spins):
 
     for binary_position in range(len(binary_string)):
         binary = int(binary_string[binary_position])
-        
+
         # mapping 1 to -1 and 0 to 1
         spin_configuration[binary_position] = -1 if binary == 1 else 1
-            
+
     return spin_configuration
-
-
-# # Test
-# spin_config = np.random.randint(2, size=5) * 2 - 1
-# print(spin_config)
-# n_spins = len(spin_config)
-# integer = spins_to_integer(spin_config)
-# print(integer)
-# spin_config_back = integer_to_spins(integer, n_spins)
-# print(spin_config_back)
-# print(spins_to_integer(spin_config_back))

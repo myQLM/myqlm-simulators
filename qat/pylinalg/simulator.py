@@ -110,12 +110,35 @@ def simulate(circuit):
         # Checking if the matrix has a matrix
 
         if not gdef.matrix:
-            raise exceptions_types.QPUException(code=exceptions_types.ErrorType.ILLEGAL_GATES,
-                               modulename="qat.pylinalg",
-                               file="qat/pylinalg/simulator.py",
-                               line=103,
-                               message="Gate {} has no matrix!"\
-                               .format(extract_syntax(gdef, circuit.gateDic)[0]))
+            gname = extract_syntax(gdef, circuit.gateDic)[0]
+            if gname == "STATE_PREPARATION":
+                matrix = gdef.syntax.parameters[0].matrix_p
+                np_matrix = mat2nparray(matrix)
+                if np_matrix.shape != (2**circuit.nbqbits, 1):
+                    raise exceptions_types.QPUException(code=exceptions_types.ErrorType.ILLEGAL_GATES,
+                                       modulename="qat.pylinalg",
+                                       file="qat/pylinalg/simulator.py",
+                                       line=103,
+                                       message="Gate {} has wrong shape {}, should be {}!"\
+                                       .format(gname, np_matrix.shape, (2**circuit.nbqbits, 1)))
+                state_vec[:] = np_matrix[:, 0].reshape(shape)
+                norm = np.linalg.norm(state_vec) 
+                if abs(norm - 1.0) > 1e-10:
+                    raise exceptions_types.QPUException(code=exceptions_types.ErrorType.ILLEGAL_GATES,
+                                       modulename="qat.pylinalg",
+                                       file="qat/pylinalg/simulator.py",
+                                       line=103,
+                                       message="State preparation should be normalized, got norm = {} instead!"\
+                                       .format(norm))
+                continue
+                
+            else:
+                raise exceptions_types.QPUException(code=exceptions_types.ErrorType.ILLEGAL_GATES,
+                                   modulename="qat.pylinalg",
+                                   file="qat/pylinalg/simulator.py",
+                                   line=103,
+                                   message="Gate {} has no matrix!"\
+                                   .format(gname))
 
 
         matrix = mat2nparray(gdef.matrix)  # convert matrix to numpy array.

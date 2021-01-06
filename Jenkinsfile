@@ -5,7 +5,7 @@
 // GROOVY GLOBALS
 //
 // ---------------------------------------------------------------------------
-def QLM_VERSION_FOR_DOCKER_IMAGE = "1.2.0"
+def QLM_VERSION_FOR_DOCKER_IMAGE = "1.2.1"
 
 // Jenkins master/slave
 def LABEL = "master"

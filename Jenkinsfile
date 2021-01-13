@@ -22,6 +22,11 @@ try {   // Use on new jobs
 HOST_NAME     = InetAddress.getLocalHost().getHostName()
 env.HOST_NAME = "$HOST_NAME"
 
+if (HOST_NAME.equals("qlmci.usrnd.lan"))
+    LICENSE = "/etc/qlm/license_nogpu"
+else
+    LICENSE = "/etc/qlm/license"
+
 // Expose params to bash
 env.UI_PRODUCT    = params.UI_PRODUCT
 env.NIGHTLY_BUILD = params.NIGHTLY_BUILD
@@ -293,13 +298,14 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                     mv  * $REPO_NAME/ 2>/dev/null || true
 
                     GIT_BASE_URL=ssh://bitbucketbdsfr.fsc.atos-services.net:7999/brq
+                    GIT_BASE_URL_QAT=${GIT_BASE_URL}ext
                     if [[ $HOST_NAME =~ qlmci2 ]]; then
                         GIT_BASE_URL=ssh://qlmjenkins@qlmgit.usrnd.lan:29418/qlm
                     fi
 
                     # Clone qat repo
-                    echo -e "--> Cloning qat, branch=master  [$GIT_BASE_URL] ..."
-                    cmd="git clone --single-branch --branch master $GIT_BASE_URL/qat"
+                    echo -e "--> Cloning qat, branch=master  [$GIT_BASE_URL_QAT] ..."
+                    cmd="git clone --single-branch --branch master $GIT_BASE_URL_QAT/qat"
                     echo "> $cmd"
                     eval $cmd
 
@@ -351,7 +357,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                 docker {
                     label "${LABEL}"
                     image "qlm-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL}-${PY_VERSION}:latest"
-                    args '-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v/etc/qlm/license:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools'
+                    args "-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v$LICENSE:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools"
                     alwaysPull false
                     reuseNode true
                 }
@@ -424,7 +430,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                 docker {
                     label "${LABEL}"
                     image "qlm-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL_CROSS_COMPILATION}-py38:latest"
-                    args '-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v/etc/qlm/license:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools'
+                    args "-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v$LICENSE:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools"
                     alwaysPull false
                     reuseNode true
                 }
@@ -464,7 +470,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                 docker {
                     label "${LABEL}"
                     image "qlm-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL_CROSS_COMPILATION}-${PY_VERSION}:latest"
-                    args '-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v/etc/qlm/license:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools'
+                    args "-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v$LICENSE:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools"
                     alwaysPull false
                     reuseNode true
                 }
@@ -502,7 +508,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                 docker {
                     label "${LABEL}"
                     image "qlm-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL}-${PY_VERSION}:latest"
-                    args '-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v/etc/qlm/license:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools'
+                    args "-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v$LICENSE:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools"
                     alwaysPull false
                     reuseNode true
                 }
@@ -569,7 +575,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                         docker {
                             label "${LABEL}"
                             image "qlm-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL}-${PY_VERSION}:latest"
-                            args '-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v/etc/qlm/license:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools'
+                            args "-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v$LICENSE:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools"
                             alwaysPull false
                             reuseNode true
                         }
@@ -611,7 +617,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                         docker {
                             label "${LABEL}"
                             image "qlm-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL_UNIT_TESTS_2}-${PY_VERSION}:latest"
-                            args '-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v/etc/qlm/license:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools'
+                            args "-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v$LICENSE:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools"
                             alwaysPull false
                             reuseNode true
                         }

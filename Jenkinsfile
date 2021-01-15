@@ -357,7 +357,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                 docker {
                     label "${LABEL}"
                     image "qlm-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL}-${PY_VERSION}:latest"
-                    args "-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v$LICENSE:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools"
+                    args "-v /var/lib/jenkins/.ssh:/var/lib/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v$LICENSE:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools"
                     alwaysPull false
                     reuseNode true
                 }
@@ -430,7 +430,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                 docker {
                     label "${LABEL}"
                     image "qlm-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL_CROSS_COMPILATION}-py38:latest"
-                    args "-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v$LICENSE:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools"
+                    args "-v /var/lib/jenkins/.ssh:/var/lib/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v$LICENSE:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools"
                     alwaysPull false
                     reuseNode true
                 }
@@ -470,7 +470,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                 docker {
                     label "${LABEL}"
                     image "qlm-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL_CROSS_COMPILATION}-${PY_VERSION}:latest"
-                    args "-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v$LICENSE:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools"
+                    args "-v /var/lib/jenkins/.ssh:/var/lib/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v$LICENSE:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools"
                     alwaysPull false
                     reuseNode true
                 }
@@ -508,7 +508,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                 docker {
                     label "${LABEL}"
                     image "qlm-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL}-${PY_VERSION}:latest"
-                    args "-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v$LICENSE:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools"
+                    args "-v /var/lib/jenkins/.ssh:/var/lib/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v$LICENSE:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools"
                     alwaysPull false
                     reuseNode true
                 }
@@ -575,7 +575,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                         docker {
                             label "${LABEL}"
                             image "qlm-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL}-${PY_VERSION}:latest"
-                            args "-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v$LICENSE:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools"
+                            args "-v /var/lib/jenkins/.ssh:/var/lib/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v$LICENSE:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools"
                             alwaysPull false
                             reuseNode true
                         }
@@ -617,7 +617,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                         docker {
                             label "${LABEL}"
                             image "qlm-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL_UNIT_TESTS_2}-${PY_VERSION}:latest"
-                            args "-v /data/jenkins/.ssh:/data/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v$LICENSE:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools"
+                            args "-v /var/lib/jenkins/.ssh:/var/lib/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v$LICENSE:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools"
                             alwaysPull false
                             reuseNode true
                         }

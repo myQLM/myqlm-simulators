@@ -318,13 +318,13 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                     echo "> $cmd"
                     eval $cmd
 
-                    cross_compilation_repos=$(grep cross-compilation ${CIDIR}/jenkins/data/projects 2>/dev/null | grep ":1$")
-                    if [[ $REPO_NAME =~ $cross_compilation_repos ]]; then
+                    #cross_compilation_repos=$(grep cross-compilation ${CIDIR}/jenkins/data/projects 2>/dev/null | grep ":1$")
+                    #if [[ $REPO_NAME =~ $cross_compilation_repos ]]; then
                         echo -e "\n--> Cloning cross-compilation, branch=master  [$GIT_BASE_URL] ..."
                         cmd="git clone --single-branch --branch master $GIT_BASE_URL/cross-compilation"
                         echo "> $cmd"
                         eval $cmd
-                    fi
+                    #fi
                 '''
 
                 script {

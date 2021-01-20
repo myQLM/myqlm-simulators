@@ -164,6 +164,7 @@ pipeline
         RUN_BY_JENKINS = 1
 
         BASEDIR          = "$WORKSPACE"
+        CIDIR            = "$BASEDIR/ci"
         QATDIR           = "$BASEDIR/qat"
         QAT_REPO_BASEDIR = "$BASEDIR"
 
@@ -276,6 +277,7 @@ pipeline
                 echo "${B_MAGENTA}[INIT]${RESET}"
                 echo "\
 BASEDIR             = ${BASEDIR}\n\
+CIDIR               = ${CIDIR}\n\
 QATDIR              = ${QATDIR}\n\
 QAT_REPO_BASEDIR    = ${QAT_REPO_BASEDIR}\n\
 \n\
@@ -298,31 +300,41 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                     mv  * $REPO_NAME/ 2>/dev/null || true
 
                     GIT_BASE_URL=ssh://bitbucketbdsfr.fsc.atos-services.net:7999/brq
-                    GIT_BASE_URL_QAT=${GIT_BASE_URL}ext
                     if [[ $HOST_NAME =~ qlmci2 ]]; then
                         GIT_BASE_URL=ssh://qlmjenkins@qlmgit.usrnd.lan:29418/qlm
                     fi
 
+                    GIT_BASE_URL_QAT=${GIT_BASE_URL}ext
+
+                    # Clone ci repo
+                    echo -e "--> Cloning qat, branch=master  [$GIT_BASE_URL] ..."
+                    cmd="git clone --single-branch --branch master $GIT_BASE_URL/ci"
+                    echo "> $cmd"
+                    eval $cmd
+
                     # Clone qat repo
-                    echo -e "--> Cloning qat, branch=master  [$GIT_BASE_URL_QAT] ..."
+                    echo -e "\n--> Cloning qat, branch=master  [$GIT_BASE_URL_QAT] ..."
                     cmd="git clone --single-branch --branch master $GIT_BASE_URL_QAT/qat"
                     echo "> $cmd"
                     eval $cmd
 
-                    echo -e "--> Cloning cross-compilation, branch=master  [$GIT_BASE_URL] ..."
-                    cmd="git clone --single-branch --branch master $GIT_BASE_URL/cross-compilation"
-                    echo "> $cmd"
-                    eval $cmd
+                    cross_compilation_repos=$(grep cross-compilation ${CIDIR}/jenkins/data/projects 2>/dev/null | grep ":1$")
+                    if [[ $REPO_NAME =~ $cross_compilation_repos ]]; then
+                        echo -e "\n--> Cloning cross-compilation, branch=master  [$GIT_BASE_URL] ..."
+                        cmd="git clone --single-branch --branch master $GIT_BASE_URL/cross-compilation"
+                        echo "> $cmd"
+                        eval $cmd
+                    fi
                 '''
 
                 script {
-                    print "Loading build functions           ..."; build           = load "${QATDIR}/jenkins/methods/build.groovy"
-                    print "Loading install functions         ..."; install         = load "${QATDIR}/jenkins/methods/install.groovy"
-                    print "Loading internal functions        ..."; internal        = load "${QATDIR}/jenkins/methods/internal.groovy"
-                    print "Loading packaging functions       ..."; packaging       = load "${QATDIR}/jenkins/methods/packaging.groovy"
-                    print "Loading static_analysis functions ..."; static_analysis = load "${QATDIR}/jenkins/methods/static_analysis.groovy"
-                    print "Loading support functions         ..."; support         = load "${QATDIR}/jenkins/methods/support.groovy"
-                    print "Loading test functions            ..."; test            = load "${QATDIR}/jenkins/methods/tests.groovy"
+                    print "Loading build functions           ..."; build           = load "${CIDIR}/jenkins/methods/build.groovy"
+                    print "Loading install functions         ..."; install         = load "${CIDIR}/jenkins/methods/install.groovy"
+                    print "Loading internal functions        ..."; internal        = load "${CIDIR}/jenkins/methods/internal.groovy"
+                    print "Loading packaging functions       ..."; packaging       = load "${CIDIR}/jenkins/methods/packaging.groovy"
+                    print "Loading static_analysis functions ..."; static_analysis = load "${CIDIR}/jenkins/methods/static_analysis.groovy"
+                    print "Loading support functions         ..."; support         = load "${CIDIR}/jenkins/methods/support.groovy"
+                    print "Loading test functions            ..."; test            = load "${CIDIR}/jenkins/methods/tests.groovy"
 
                     // Set a few badges for the build
                     support.badges()
@@ -555,7 +567,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
             when {
                 allOf {
                     expression {
-                        echo "${B_MAGENTA}"; echo "END SECTION"; echo "BEGIN SECTION: UNIT_TEST"; echo "${RESET}"
+                        echo "${B_MAGENTA}"; echo "END SECTION"; echo "BEGIN SECTION: UNIT_TESTS"; echo "${RESET}"
                         if (env.UI_TESTS.toLowerCase().contains("skip")) { return false } else { return true }
                     };
                     expression { return internal.doit("$QUALIFIED_REPO_NAME", "UNIT-TESTS") }
@@ -563,11 +575,11 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
             }
             stages
             {
-                stage("unit-tests-1") {
+                stage("unit-tests") {
                     when {
                         expression {
-                            echo "${B_MAGENTA}--------------------- [[ UNIT-TESTS-1 ]] ---------------------${RESET}"
-                            return internal.doit("$QUALIFIED_REPO_NAME", "UNIT-TESTS", "UNIT-TESTS-1")
+                            echo "${B_MAGENTA}--------------------- [[ UNIT-TESTS ]] ---------------------${RESET}"
+                            return internal.doit("$QUALIFIED_REPO_NAME", "UNIT-TESTS", "UNIT-TESTS")
                         }
                         beforeAgent true
                     }
@@ -586,8 +598,8 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                         BUILD_DIR                    = support.getenv("BUILD_DIR",   "linux", "${env.OS}", "python36")
                         TESTS_REPORTS_DIR            = "$REPO_NAME/$BUILD_DIR/tests/reports"
                         TESTS_REPORTS_DIR_JUNIT      = "$TESTS_REPORTS_DIR/junit"
-                        TESTS_REPORTS_DIR_GTEST      = "$TESTS_REPORTS_DIR/gtest"
                         TESTS_REPORTS_DIR_CUNIT      = "$TESTS_REPORTS_DIR/cunit"
+                        TESTS_REPORTS_DIR_GTEST      = "$TESTS_REPORTS_DIR/gtest"
                         GTEST_OUTPUT                 = "xml:$WORKSPACE/$TESTS_REPORTS_DIR_GTEST/"
                         TESTS_REPORTS_DIR_VALGRIND   = "$TESTS_REPORTS_DIR/valgrind"
                         TESTS_REPORTS_DIR_COVERAGE   = "$TESTS_REPORTS_DIR/coverage"
@@ -596,40 +608,31 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                     }
                     steps {
                         script {
-                            env.stage = "tests"
-                            support.restore_dependencies_tarballs(env.stage)
-                            test.tests("${env.OS}")
-                            test.tests_reporting()
+                            support.restore_dependencies_tarballs("$STAGE_NAME")
+                            test.tests("$STAGE_NAME", "${env.OS}")
+                            test.tests_reporting("$STAGE_NAME")
                         }
                     }
                 }
 
-                stage("unit-tests-2")
+                stage("unit-tests-gpu")
                 {
                     when {
                         expression {
-                            echo "${B_MAGENTA}--------------------- [[ UNIT-TESTS-2 ]] ---------------------${RESET}"
-                            return internal.doit("$QUALIFIED_REPO_NAME", "UNIT-TESTS", "UNIT-TESTS-2")
+                            echo "${B_MAGENTA}--------------------- [[ UNIT-TESTS-GPU ]] ---------------------${RESET}"
+                            return internal.doit("$QUALIFIED_REPO_NAME", "UNIT-TESTS", "UNIT-TESTS-GPU")
                         }
                         beforeAgent true
                     }
-                    agent {
-                        docker {
-                            label "${LABEL}"
-                            image "qlm-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL_UNIT_TESTS_2}-${PY_VERSION}:latest"
-                            args "-v /var/lib/jenkins/.ssh:/var/lib/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v$LICENSE:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools"
-                            alwaysPull false
-                            reuseNode true
-                        }
-                    }
+                    agent none
                     environment {
-                        RUNTIME_DIR                  = "$WORKSPACE/runtime_linux_${env.OS}"
-                        INSTALL_DIR                  = support.getenv("INSTALL_DIR", "linux", "${env.OS}")
-                        BUILD_DIR                    = support.getenv("BUILD_DIR",   "linux", "${env.OS}")
+                        RUNTIME_DIR                  = "$WORKSPACE/runtime_linux_${env.OS}_python36"
+                        INSTALL_DIR                  = support.getenv("INSTALL_DIR", "linux", "${env.OS}", "python36")
+                        BUILD_DIR                    = support.getenv("BUILD_DIR",   "linux", "${env.OS}", "python36")
                         TESTS_REPORTS_DIR            = "$REPO_NAME/$BUILD_DIR/tests/reports"
                         TESTS_REPORTS_DIR_JUNIT      = "$TESTS_REPORTS_DIR/junit"
-                        TESTS_REPORTS_DIR_GTEST      = "$TESTS_REPORTS_DIR/gtest"
                         TESTS_REPORTS_DIR_CUNIT      = "$TESTS_REPORTS_DIR/cunit"
+                        TESTS_REPORTS_DIR_GTEST      = "$TESTS_REPORTS_DIR/gtest"
                         GTEST_OUTPUT                 = "xml:$WORKSPACE/$TESTS_REPORTS_DIR_GTEST/"
                         TESTS_REPORTS_DIR_VALGRIND   = "$TESTS_REPORTS_DIR/valgrind"
                         TESTS_REPORTS_DIR_COVERAGE   = "$TESTS_REPORTS_DIR/coverage"
@@ -638,10 +641,9 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                     }
                     steps {
                         script {
-                            env.stage = "tests"
-                            support.restore_tarballs_dependencies(env.stage)
-                            test.tests()
-                            test.tests_reporting()
+                            support.restore_dependencies_tarballs("$STAGE_NAME")
+                            test.tests("$STAGE_NAME", "${env.OS}")
+                            test.tests_reporting("$STAGE_NAME")
                         }
                     }
                 }

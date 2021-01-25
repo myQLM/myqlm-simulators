@@ -208,8 +208,7 @@ pipeline
 
         REPO_TYPE = sh returnStdout: true, script: '''set +x
             repo_type=dev
-            #if [[ $UI_PRODUCT != null ]]; then          # Job was started from main
-            if [[ $UI_PRODUCT = ALL ]]; then          # Job was started from main
+            if [[ $UI_PRODUCT != null ]]; then          # Job was started from main
                 if [[ $BRANCH_NAME = rc ]]; then
                     repo_type=rc
                 else
@@ -308,7 +307,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                     GIT_BASE_URL_QAT=${GIT_BASE_URL}ext
 
                     # Clone ci repo
-                    echo -e "--> Cloning qat, branch=master  [$GIT_BASE_URL] ..."
+                    echo -e "--> Cloning ci, branch=master  [$GIT_BASE_URL] ..."
                     cmd="git clone --single-branch --branch master $GIT_BASE_URL/ci"
                     echo "> $cmd"
                     eval $cmd
@@ -319,14 +318,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                     echo "> $cmd"
                     eval $cmd
 
-                    cross_compilation_repos=$(grep cross-compilation ${CIDIR}/jenkins/data/projects | grep ":1$")
-                    cross_compilation_repos=${cross_compilation_repos//$'\n'/ }
-                    if [[ $cross_compilation_repos == *"$REPO_NAME"* ]]; then
-                        echo -e "\n--> Cloning cross-compilation, branch=master  [$GIT_BASE_URL] ..."
-                        cmd="git clone --single-branch --branch master $GIT_BASE_URL/cross-compilation"
-                        echo "> $cmd"
-                        eval $cmd
-                    fi
+                    ${CIDIR}/jenkins/scripts/checkout_cross_compilation.sh "$CIDIR" "$GIT_BASE_URL" "$REPO_NAME"
                 '''
 
                 script {
@@ -353,7 +345,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
         {
             steps {
                 script {
-                    support.versioning(UI_PRODUCT, params.BUILD_DATE, JOB_BUILD_DATE, params.UI_PRODUCT_VERSION)
+                    support.versioning(UI_PRODUCT, params.MAIN_BUILD_DATE, JOB_BUILD_DATE, params.UI_PRODUCT_VERSION)
                 }
             }
         }
@@ -575,6 +567,20 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                     expression { return internal.doit("$QUALIFIED_REPO_NAME", "UNIT-TESTS") }
                 }
             }
+            environment {
+                RUNTIME_DIR                  = "$WORKSPACE/runtime_linux_${env.OS}_python36"
+                INSTALL_DIR                  = support.getenv("INSTALL_DIR", "linux", "${env.OS}", "python36")
+                BUILD_DIR                    = support.getenv("BUILD_DIR",   "linux", "${env.OS}", "python36")
+                TESTS_REPORTS_DIR            = "$REPO_NAME/$BUILD_DIR/tests/reports"
+                TESTS_REPORTS_DIR_JUNIT      = "$TESTS_REPORTS_DIR/junit"
+                TESTS_REPORTS_DIR_CUNIT      = "$TESTS_REPORTS_DIR/cunit"
+                TESTS_REPORTS_DIR_GTEST      = "$TESTS_REPORTS_DIR/gtest"
+                GTEST_OUTPUT                 = "xml:$WORKSPACE/$TESTS_REPORTS_DIR_GTEST/"
+                TESTS_REPORTS_DIR_VALGRIND   = "$TESTS_REPORTS_DIR/valgrind"
+                TESTS_REPORTS_DIR_COVERAGE   = "$TESTS_REPORTS_DIR/coverage"
+                TESTS_REPORTS_DIR_COVERAGEPY = "$REPO_NAME/${BUILD_DIR}/tests/htmlcov"
+                VALGRIND_ARGS                = "--fair-sched=no --child-silent-after-fork=yes --tool=memcheck --xml=yes --xml-file=$WORKSPACE/$TESTS_REPORTS_DIR_VALGRIND/report.xml --leak-check=full --show-leak-kinds=all --show-reachable=no --track-origins=yes --run-libc-freeres=no --gen-suppressions=all --suppressions=$QAT"
+            }
             stages
             {
                 stage("unit-tests") {
@@ -594,25 +600,10 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                             reuseNode true
                         }
                     }
-                    environment {
-                        RUNTIME_DIR                  = "$WORKSPACE/runtime_linux_${env.OS}_python36"
-                        INSTALL_DIR                  = support.getenv("INSTALL_DIR", "linux", "${env.OS}", "python36")
-                        BUILD_DIR                    = support.getenv("BUILD_DIR",   "linux", "${env.OS}", "python36")
-                        TESTS_REPORTS_DIR            = "$REPO_NAME/$BUILD_DIR/tests/reports"
-                        TESTS_REPORTS_DIR_JUNIT      = "$TESTS_REPORTS_DIR/junit"
-                        TESTS_REPORTS_DIR_CUNIT      = "$TESTS_REPORTS_DIR/cunit"
-                        TESTS_REPORTS_DIR_GTEST      = "$TESTS_REPORTS_DIR/gtest"
-                        GTEST_OUTPUT                 = "xml:$WORKSPACE/$TESTS_REPORTS_DIR_GTEST/"
-                        TESTS_REPORTS_DIR_VALGRIND   = "$TESTS_REPORTS_DIR/valgrind"
-                        TESTS_REPORTS_DIR_COVERAGE   = "$TESTS_REPORTS_DIR/coverage"
-                        TESTS_REPORTS_DIR_COVERAGEPY = "$REPO_NAME/${BUILD_DIR}/tests/htmlcov"
-                        VALGRIND_ARGS                = "--fair-sched=no --child-silent-after-fork=yes --tool=memcheck --xml=yes --xml-file=$WORKSPACE/$TESTS_REPORTS_DIR_VALGRIND/report.xml --leak-check=full --show-leak-kinds=all --show-reachable=no --track-origins=yes --run-libc-freeres=no --gen-suppressions=all --suppressions=$QAT"
-                    }
                     steps {
                         script {
                             support.restore_dependencies_tarballs("$STAGE_NAME")
                             test.tests("$STAGE_NAME", "${env.OS}")
-                            test.tests_reporting("$STAGE_NAME")
                         }
                     }
                 }
@@ -627,24 +618,34 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
                         beforeAgent true
                     }
                     agent none
-                    environment {
-                        RUNTIME_DIR                  = "$WORKSPACE/runtime_linux_${env.OS}_python36"
-                        INSTALL_DIR                  = support.getenv("INSTALL_DIR", "linux", "${env.OS}", "python36")
-                        BUILD_DIR                    = support.getenv("BUILD_DIR",   "linux", "${env.OS}", "python36")
-                        TESTS_REPORTS_DIR            = "$REPO_NAME/$BUILD_DIR/tests/reports"
-                        TESTS_REPORTS_DIR_JUNIT      = "$TESTS_REPORTS_DIR/junit"
-                        TESTS_REPORTS_DIR_CUNIT      = "$TESTS_REPORTS_DIR/cunit"
-                        TESTS_REPORTS_DIR_GTEST      = "$TESTS_REPORTS_DIR/gtest"
-                        GTEST_OUTPUT                 = "xml:$WORKSPACE/$TESTS_REPORTS_DIR_GTEST/"
-                        TESTS_REPORTS_DIR_VALGRIND   = "$TESTS_REPORTS_DIR/valgrind"
-                        TESTS_REPORTS_DIR_COVERAGE   = "$TESTS_REPORTS_DIR/coverage"
-                        TESTS_REPORTS_DIR_COVERAGEPY = "$REPO_NAME/${BUILD_DIR}/tests/htmlcov"
-                        VALGRIND_ARGS                = "--fair-sched=no --child-silent-after-fork=yes --tool=memcheck --xml=yes --xml-file=$WORKSPACE/$TESTS_REPORTS_DIR_VALGRIND/report.xml --leak-check=full --show-leak-kinds=all --show-reachable=no --track-origins=yes --run-libc-freeres=no --gen-suppressions=all --suppressions=$QAT"
-                    }
                     steps {
                         script {
                             support.restore_dependencies_tarballs("$STAGE_NAME")
                             test.tests("$STAGE_NAME", "${env.OS}")
+                        }
+                    }
+                }
+
+                stage("unit-tests-reporting")
+                {
+                    when {
+                        expression {
+                            echo "${B_MAGENTA}--------------------- [[ UNIT-TESTS-REPORTING ]] ---------------------${RESET}"
+                            return internal.doit("$QUALIFIED_REPO_NAME", "UNIT-TESTS", "UNIT-TESTS-REPORTING")
+                        }
+                        beforeAgent true
+                    }
+                    agent {
+                        docker {
+                            label "${LABEL}"
+                            image "qlm-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL}-${PY_VERSION}:latest"
+                            args "-v /var/lib/jenkins/.ssh:/var/lib/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v$LICENSE:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools"
+                            alwaysPull false
+                            reuseNode true
+                        }
+                    }
+                    steps {
+                        script {
                             test.tests_reporting("$STAGE_NAME")
                         }
                     }
@@ -696,4 +697,5 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
         }
     } // post
 } // pipeline
+
 

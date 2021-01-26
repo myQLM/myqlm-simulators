@@ -208,7 +208,7 @@ pipeline
 
         REPO_TYPE = sh returnStdout: true, script: '''set +x
             repo_type=dev
-            if [[ $UI_PRODUCT != null ]]; then          # Job was started from main
+            if [[ ${UI_PRODUCT,,} = all ]]; then          # Job was started from main
                 if [[ $BRANCH_NAME = rc ]]; then
                     repo_type=rc
                 else

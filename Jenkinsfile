@@ -688,9 +688,9 @@ BUILD_DATE          = ${BUILD_DATE}\n\
             script {
                 sh '''set +x
                     ${CIDIR}/jenkins/scripts/publish_rpms.sh success
+                    ${CIDIR}/jenkins/scripts/publish_wheels.sh success
                     rm -f tarballs_artifacts/.*.artifact 2>/dev/null
                 '''
-                packaging.publish_wheels("success")
             }
         }
 
@@ -698,8 +698,10 @@ BUILD_DATE          = ${BUILD_DATE}\n\
         {
             echo "${B_MAGENTA}\n[POST:unstable]${RESET}"
             script {
-                sh '${CIDIR}/jenkins/scripts/publish_rpms.sh unstable'
-                packaging.publish_wheels("unstable")
+                sh '''set +x
+                    ${CIDIR}/jenkins/scripts/publish_rpms.sh unstable
+                    ${CIDIR}/jenkins/scripts/publish_wheels.sh unstable
+                '''
             }
         }
 

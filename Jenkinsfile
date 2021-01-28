@@ -28,8 +28,11 @@ else
     LICENSE = "/etc/qlm/license"
 
 // Expose params to bash
-env.UI_PRODUCT    = params.UI_PRODUCT
-env.NIGHTLY_BUILD = params.NIGHTLY_BUILD
+env.UI_PRODUCT      = params.UI_PRODUCT
+env.PRODUCT_VERSION = params.UI_PRODUCT_VERSION
+env.NIGHTLY_BUILD   = params.NIGHTLY_BUILD
+env.MAIN_BUILD_DATE = params.MAIN_BUILD_DATE
+env.BUILD_CAUSE     = currentBuild.getBuildCauses()[0].shortDescription.toString()
 
 
 // ---------------------------------------------------------------------------
@@ -180,7 +183,7 @@ pipeline
         UNDERLINE = '\033[4m'
         RESET     = '\033[0m'
 
-        BUILD_CAUSE      = currentBuild.getBuildCauses()[0].shortDescription.toString()
+        //BUILD_CAUSE      = currentBuild.getBuildCauses()[0].shortDescription.toString()
         BUILD_CAUSE_NAME = currentBuild.getBuildCauses()[0].userName.toString()
 
         OS = sh returnStdout: true, script: '''set +x
@@ -208,7 +211,7 @@ pipeline
 
         REPO_TYPE = sh returnStdout: true, script: '''set +x
             repo_type=dev
-            if [[ ${UI_PRODUCT,,} = all ]]; then          # Job was started from main
+            if [[ $BUILD_CAUSE =~ upstream ]]; then
                 if [[ $BRANCH_NAME = rc ]]; then
                     repo_type=rc
                 else
@@ -259,14 +262,36 @@ pipeline
             echo -n $job_name
         '''
 
-        JOB_BUILD_DATE = sh returnStdout: true, script: '''set +x
-            if [[ $HOST_NAME =~ qlmci2 ]]; then
-                now=$(TZ=America/Phoenix && date +"%y%m%d.%H%M")
+        BUILD_DATE = sh returnStdout: true, script: '''set +x
+            if [[ $MAIN_BUILD_DATE != null ]]; then
+                build_date=${MAIN_BUILD_DATE}
             else
-                now=$(TZ=Europe/Paris && date +"%y%m%d.%H%M")
+                if [[ $HOST_NAME =~ qlmci2 ]]; then
+                    build_date=$(TZ=America/Phoenix && date +"%y%m%d.%H%M")
+                else
+                    build_date=$(TZ=Europe/Paris && date +"%y%m%d.%H%M")
+                fi
             fi
-            echo -n $now
+            echo -n $build_date
         '''
+
+        PRODUCT_VERSION = sh returnStdout: true, script: '''set +x
+            # Clone ci repo
+            git_base_url=ssh://bitbucketbdsfr.fsc.atos-services.net:7999/brq
+            if [[ $HOST_NAME =~ qlmci2 ]]; then
+                git_base_url=ssh://qlmjenkins@qlmgit.usrnd.lan:29418/qlm
+            fi
+            git clone --single-branch --branch master $git_base_url/ci
+
+            if [[ $PRODUCT_VERSION != null ]]; then
+                product_version=${PRODUCT_VERSION}
+            else
+                product_version="$(cat $WORKSPACE/ci/share/versions/${UI_PRODUCT,,}.version)"
+            fi
+            echo -n $product_version
+        '''
+
+        PRODUCT_NAME = "$UI_PRODUCT"
     }
 
     stages
@@ -292,33 +317,28 @@ REPO_NAME           = ${REPO_NAME}\n\
 QUALIFIED_REPO_NAME = ${QUALIFIED_REPO_NAME}\n\
 JOB_QUALIFIER       = ${JOB_QUALIFIER}\n\
 JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
+\n\
+BUILD_DATE          = ${BUILD_DATE}\n\
+\n\
 "
-
                 sh '''set +x
                     mkdir -p $REPO_NAME
-                    shopt -s dotglob
-                    mv  * $REPO_NAME/ 2>/dev/null || true
+                    shopt -s extglob dotglob
+                    mv -- !(ci) $REPO_NAME/ 2>/dev/null || true
 
-                    GIT_BASE_URL=ssh://bitbucketbdsfr.fsc.atos-services.net:7999/brq
+                    git_base_url=ssh://bitbucketbdsfr.fsc.atos-services.net:7999/brq
                     if [[ $HOST_NAME =~ qlmci2 ]]; then
-                        GIT_BASE_URL=ssh://qlmjenkins@qlmgit.usrnd.lan:29418/qlm
+                        git_base_url=ssh://qlmjenkins@qlmgit.usrnd.lan:29418/qlm
                     fi
 
-                    GIT_BASE_URL_QAT=${GIT_BASE_URL}ext
-
-                    # Clone ci repo
-                    echo -e "--> Cloning ci, branch=master  [$GIT_BASE_URL] ..."
-                    cmd="git clone --single-branch --branch master $GIT_BASE_URL/ci"
-                    echo "> $cmd"
-                    eval $cmd
-
                     # Clone qat repo
-                    echo -e "\n--> Cloning qat, branch=master  [$GIT_BASE_URL_QAT] ..."
-                    cmd="git clone --single-branch --branch master $GIT_BASE_URL_QAT/qat"
+                    git_base_url_qat=${git_base_url}ext
+                    echo -e "\n--> Cloning qat, branch=master  [$git_base_url_qat] ..."
+                    cmd="git clone --single-branch --branch master $git_base_url_qat/qat"
                     echo "> $cmd"
                     eval $cmd
 
-                    ${CIDIR}/jenkins/scripts/checkout_cross_compilation.sh "$CIDIR" "$GIT_BASE_URL" "$REPO_NAME"
+                    ${CIDIR}/jenkins/scripts/checkout_cross_compilation.sh "$CIDIR" "$git_base_url" "$REPO_NAME"
                 '''
 
                 script {
@@ -345,7 +365,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
         {
             steps {
                 script {
-                    support.versioning(UI_PRODUCT, params.MAIN_BUILD_DATE, JOB_BUILD_DATE, params.UI_PRODUCT_VERSION)
+                    support.versioning()
                 }
             }
         }
@@ -666,11 +686,11 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
         {
             echo "${B_MAGENTA}\n[POST:success]${RESET}"
             script {
-                packaging.publish_rpms("success")
-                packaging.publish_wheels("success")
                 sh '''set +x
+                    ${CIDIR}/jenkins/scripts/publish_rpms.sh success
                     rm -f tarballs_artifacts/.*.artifact 2>/dev/null
                 '''
+                packaging.publish_wheels("success")
             }
         }
 
@@ -678,7 +698,7 @@ JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
         {
             echo "${B_MAGENTA}\n[POST:unstable]${RESET}"
             script {
-                packaging.publish_rpms("unstable")
+                sh '${CIDIR}/jenkins/scripts/publish_rpms.sh unstable'
                 packaging.publish_wheels("unstable")
             }
         }

@@ -13,8 +13,8 @@ def LABEL = "master"
 try {   // Use on new jobs
     x = UI_OSVERSION
 } catch (e) {
-    echo "***** UI_OSVERSION undefined; setting it to 8.2 *****"
-    UI_OSVERSION = 8.2
+    echo "***** UI_OSVERSION undefined; setting it to 8.3 *****"
+    UI_OSVERSION = 8.3
 }
 
 // Exception: staticMethod java.net.InetAddress getLocalHost
@@ -27,13 +27,12 @@ if (HOST_NAME.equals("qlmci.usrnd.lan"))
 else
     LICENSE = "/etc/qlm/license"
 
-// Expose params to bash
-env.UI_PRODUCT      = params.UI_PRODUCT
-env.PRODUCT_VERSION = params.UI_PRODUCT_VERSION
-env.NIGHTLY_BUILD   = params.NIGHTLY_BUILD
-env.MAIN_BUILD_DATE = params.MAIN_BUILD_DATE
-env.BUILD_CAUSE     = currentBuild.getBuildCauses()[0].shortDescription.toString()
+MAIN_PRODUCT         = params.UI_PRODUCT
+MAIN_PRODUCT_VERSION = params.UI_PRODUCT_VERSION
+MAIN_NIGHTLY_BUILD   = params.NIGHTLY_BUILD
+MAIN_BUILD_DATE      = params.MAIN_BUILD_DATE
 
+env.BUILD_CAUSE     = currentBuild.getBuildCauses()[0].shortDescription.toString()
 
 // ---------------------------------------------------------------------------
 //
@@ -62,24 +61,36 @@ properties([
     disableConcurrentBuilds(),
     pipelineTriggers([pollSCM('')]),
     parameters([
-        [$class: 'ChoiceParameter', choiceType: 'PT_RADIO', description: '<br>', filterLength: 1, filterable: false, name: 'UI_PRODUCT', randomName: 'choice-parameter-266216487624195',
+/*
+        [$class: 'CascadeChoiceParameter', choiceType: 'PT_RADIO', description: '<br>', filterLength: 1, filterable: false, name: 'UI_PRODUCT', randomName: 'choice-parameter-266216487624195',
+            referencedParameters: 'JOB_NAME',
             script: [
                 $class: 'GroovyScript',
                 fallbackScript: [
                     classpath: [],
                     sandbox: false,
-                    script: ' '
+                    script: ''
                 ],
                 script: [
                     classpath: [],
                     sandbox: false,
                     script: '''
-                        return ['QLM:selected', 'myQLM', 'QLMaaS']
+                        String job_name = System.getenv('JOB_NAME')
+                        if (job_name.contains("myqlm")) {
+                            return ['QLM:disabled', 'myQLM:selected', 'QLMaaS:disabled']
+                        } else {
+                            if (job_name.contains("qlmaas")) {
+                                return ['QLM:disabled', 'myQLM:disabled', 'QLMaaS:selected']
+                            } else {
+                                return ['QLM:selected', 'myQLM:disabled', 'QLMaaS:disabled']
+                            }
+                        }
                     '''
                 ]
             ]
         ],
-        [$class: 'ChoiceParameter', choiceType: 'PT_SINGLE_SELECT', description: '', filterLength: 1, filterable: false, name: 'UI_VERSION', randomName: 'choice-parameter-266216487624195',
+*/
+        [$class: 'ChoiceParameter', choiceType: 'PT_SINGLE_SELECT', description: '', filterLength: 1, filterable: false, name: 'UI_VERSION', randomName: 'choice-parameter-266216487624196',
             script: [
                 $class: 'ScriptlerScript',
                 parameters: [
@@ -102,7 +113,7 @@ properties([
                     classpath: [],
                     sandbox: false,
                     script: '''
-                        return ['7.8', '8.2:selected']
+                        return ['7.8', '8.2:selected' ,'8.3']
                     '''
                 ]
             ]
@@ -203,6 +214,15 @@ pipeline
         OSLABEL_UNIT_TESTS_2      = "rhel8.2"
         OS_UNIT_TESTS_2           = "el8"
 
+        NIGHTLY_BUILD = sh returnStdout: true, script: '''set +x
+            if [[ -n $MAIN_NIGHTLY_BUILD && $MAIN_NIGHTLY_BUILD != null ]]; then
+                nightly_build=${MAIN_NIGHTLY_BUILD}
+            else
+                nightly_build=false
+            fi
+            echo -n $nightly_build
+        '''
+
         BUILD_TYPE = sh returnStdout: true, script: '''set +x
             build_type=debug
             [[ $BRANCH_NAME = rc ]] && build_type=release
@@ -263,7 +283,7 @@ pipeline
         '''
 
         BUILD_DATE = sh returnStdout: true, script: '''set +x
-            if [[ $MAIN_BUILD_DATE != null ]]; then
+            if [[ -n $MAIN_BUILD_DATE && $MAIN_BUILD_DATE != null ]]; then
                 build_date=${MAIN_BUILD_DATE}
             else
                 if [[ $HOST_NAME =~ qlmci2 ]]; then
@@ -283,15 +303,36 @@ pipeline
             fi
             git clone --single-branch --branch master $git_base_url/ci
 
-            if [[ $PRODUCT_VERSION != null ]]; then
-                product_version=${PRODUCT_VERSION}
+            if [[ $JOB_NAME =~ myqlm ]]; then
+                product=myqlm
+            elif [[ $JOB_NAME =~ qlmaas ]]; then
+                product=qlmaas
             else
-                product_version="$(cat $WORKSPACE/ci/share/versions/${UI_PRODUCT,,}.version)"
+                product=qlm
+            fi
+
+            if [[ -n $MAIN_PRODUCT_VERSION && $MAIN_PRODUCT_VERSION != null ]]; then
+                product_version=${MAIN_PRODUCT_VERSION}
+            else
+                product_version="$(cat $WORKSPACE/ci/share/versions/$product.version)"
             fi
             echo -n $product_version
         '''
 
-        PRODUCT_NAME = "$UI_PRODUCT"
+        PRODUCT = sh returnStdout: true, script: '''set +x
+            if [[ -n $MAIN_PRODUCT && $MAIN_PRODUCT != null ]]; then
+                product=$MAIN_PRODUCT
+            else
+                if [[ $JOB_NAME =~ myqlm ]]; then
+                    product=myqlm
+                elif [[ $JOB_NAME =~ qlmaas ]]; then
+                    product=qlmaas
+                else
+                    product=qlm
+                fi
+            fi
+            echo -n $product
+        '''
     }
 
     stages
@@ -301,24 +342,32 @@ pipeline
             steps {
                 echo "${B_MAGENTA}[INIT]${RESET}"
                 echo "\
-BASEDIR             = ${BASEDIR}\n\
-CIDIR               = ${CIDIR}\n\
-QATDIR              = ${QATDIR}\n\
-QAT_REPO_BASEDIR    = ${QAT_REPO_BASEDIR}\n\
+params.MAIN_PRODUCT         = ${params.MAIN_PRODUCT}\n\
+params.MAIN_PRODUCT_VERSION = ${params.MAIN_PRODUCT_VERSION}\n\
+params.MAIN_BUILD_DATE      = ${params.MAIN_BUILD_DATE}\n\
+params.MAIN_NIGHTLY_BUILD   = ${params.MAIN_NIGHTLY_BUILD}\n\
 \n\
-BUILD_CAUSE         = ${BUILD_CAUSE}\n\
-BUILD_CAUSE_NAME    = ${BUILD_CAUSE_NAME}\n\
+UI_VERSION                  = ${UI_VERSION}\n\
+UI_OSVERSION                = ${UI_OSVERSION}\n\
+UI_VERBOSE                  = ${UI_VERBOSE}\n\
+UI_TESTS                    = ${UI_TESTS}\n\
 \n\
-REPO_TYPE           = ${REPO_TYPE}\n\
-NIGHTLY_BUILD       = ${NIGHTLY_BUILD}\n\
+CIDIR                       = ${CIDIR}\n\
+QATDIR                      = ${QATDIR}\n\
+QAT_REPO_BASEDIR            = ${QAT_REPO_BASEDIR}\n\
 \n\
-JOB_NAME            = ${JOB_NAME}\n\
-REPO_NAME           = ${REPO_NAME}\n\
-QUALIFIED_REPO_NAME = ${QUALIFIED_REPO_NAME}\n\
-JOB_QUALIFIER       = ${JOB_QUALIFIER}\n\
-JOB_QUALIFIER_PATH  = ${JOB_QUALIFIER_PATH}\n\
+BUILD_CAUSE                 = ${BUILD_CAUSE}\n\
+BUILD_CAUSE_NAME            = ${BUILD_CAUSE_NAME}\n\
 \n\
-BUILD_DATE          = ${BUILD_DATE}\n\
+NIGHTLY_BUILD               = ${NIGHTLY_BUILD}\n\
+REPO_TYPE                   = ${REPO_TYPE}\n\
+QUALIFIED_REPO_NAME         = ${QUALIFIED_REPO_NAME}\n\
+JOB_QUALIFIER               = ${JOB_QUALIFIER}\n\
+JOB_QUALIFIER_PATH          = ${JOB_QUALIFIER_PATH}\n\
+REPO_NAME                   = ${REPO_NAME}\n\
+BUILD_DATE                  = ${BUILD_DATE}\n\
+PRODUCT_VERSION             = ${PRODUCT_VERSION}\n\
+PRODUCT                     = ${PRODUCT}\n\
 \n\
 "
                 sh '''set +x
@@ -338,17 +387,17 @@ BUILD_DATE          = ${BUILD_DATE}\n\
                     echo "> $cmd"
                     eval $cmd
 
-                    ${CIDIR}/jenkins/scripts/checkout_cross_compilation.sh "$CIDIR" "$git_base_url" "$REPO_NAME"
+                    ${CIDIR}/bin/clone_cross_compilation.sh "$CIDIR" "$git_base_url" "$REPO_NAME"
                 '''
 
                 script {
-                    print "Loading build functions           ..."; build           = load "${CIDIR}/jenkins/methods/build.groovy"
-                    print "Loading install functions         ..."; install         = load "${CIDIR}/jenkins/methods/install.groovy"
-                    print "Loading internal functions        ..."; internal        = load "${CIDIR}/jenkins/methods/internal.groovy"
-                    print "Loading packaging functions       ..."; packaging       = load "${CIDIR}/jenkins/methods/packaging.groovy"
-                    print "Loading static_analysis functions ..."; static_analysis = load "${CIDIR}/jenkins/methods/static_analysis.groovy"
-                    print "Loading support functions         ..."; support         = load "${CIDIR}/jenkins/methods/support.groovy"
-                    print "Loading test functions            ..."; test            = load "${CIDIR}/jenkins/methods/tests.groovy"
+                    print "Loading build functions           ..."; build           = load "${CIDIR}/methods/build.groovy"
+                    print "Loading install functions         ..."; install         = load "${CIDIR}/methods/install.groovy"
+                    print "Loading internal functions        ..."; internal        = load "${CIDIR}/methods/internal.groovy"
+                    print "Loading packaging functions       ..."; packaging       = load "${CIDIR}/methods/packaging.groovy"
+                    print "Loading static_analysis functions ..."; static_analysis = load "${CIDIR}/methods/static_analysis.groovy"
+                    print "Loading support functions         ..."; support         = load "${CIDIR}/methods/support.groovy"
+                    print "Loading test functions            ..."; test            = load "${CIDIR}/methods/tests.groovy"
 
                     // Set a few badges for the build
                     support.badges()
@@ -411,7 +460,7 @@ BUILD_DATE          = ${BUILD_DATE}\n\
                     when { expression { return internal.doit("$QUALIFIED_REPO_NAME", "BUILD36", "$STAGE_NAME") } }
                     steps {
                         script {
-                            packaging.rpm()
+                            packaging.build_rpms()
                         }
                     }
                 }
@@ -420,7 +469,7 @@ BUILD_DATE          = ${BUILD_DATE}\n\
                     when { expression { return internal.doit("$QUALIFIED_REPO_NAME", "BUILD36", "$STAGE_NAME") } }
                     steps {
                         script {
-                            packaging.wheel("${env.OS}")
+                            packaging.build_wheels("${env.OS}")
                         }
                     }
                 }
@@ -476,7 +525,7 @@ BUILD_DATE          = ${BUILD_DATE}\n\
                     when { expression { return internal.doit("$QUALIFIED_REPO_NAME", "BUILD38", "$STAGE_NAME") } }
                     steps {
                         script {
-                            packaging.wheel("${env.OS}")
+                            packaging.build_wheels("${env.OS}")
                         }
                     }
                 }
@@ -679,18 +728,19 @@ BUILD_DATE          = ${BUILD_DATE}\n\
     {
         always
         {
-            echo "${B_MAGENTA}\nEND SECTION\n[POST:always]${RESET}"
+            echo "\nEND SECTION\n[POST:always]"
         }
 
         success
         {
             echo "${B_MAGENTA}\n[POST:success]${RESET}"
             script {
+                packaging.publish_rpms("success")
+                packaging.publish_wheels("success")
                 sh '''set +x
-                    ${CIDIR}/jenkins/scripts/publish_rpms.sh success
-                    ${CIDIR}/jenkins/scripts/publish_wheels.sh success
                     rm -f tarballs_artifacts/.*.artifact 2>/dev/null
                 '''
+                support.badges("post")
             }
         }
 
@@ -698,18 +748,15 @@ BUILD_DATE          = ${BUILD_DATE}\n\
         {
             echo "${B_MAGENTA}\n[POST:unstable]${RESET}"
             script {
-                sh '''set +x
-                    ${CIDIR}/jenkins/scripts/publish_rpms.sh unstable
-                    ${CIDIR}/jenkins/scripts/publish_wheels.sh unstable
-                '''
+                packaging.publish_rpms("unstable")
+                packaging.publish_wheels("unstable")
+                support.badges("post")
             }
         }
 
         cleanup
         {
-            echo "${B_MAGENTA}[POST:cleanup]${RESET}"
             script {
-                support.badges("post")
                 if (!BUILD_CAUSE.contains("upstream")) {        // Send emails only if not started by upstream (main)
                     emailext body: "${BUILD_URL}",
                         recipientProviders: [[$class:'CulpritsRecipientProvider'],[$class:'RequesterRecipientProvider']],
@@ -719,5 +766,3 @@ BUILD_DATE          = ${BUILD_DATE}\n\
         }
     } // post
 } // pipeline
-
-

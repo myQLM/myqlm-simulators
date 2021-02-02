@@ -75,11 +75,10 @@ properties([
                     classpath: [],
                     sandbox: false,
                     script: '''
-                        String job_name = System.getenv('JOB_NAME')
-                        if (job_name.contains("myqlm")) {
+                        if (JOB_NAME.contains("myqlm")) {
                             return ['QLM:disabled', 'myQLM:selected', 'QLMaaS:disabled']
                         } else {
-                            if (job_name.contains("qlmaas")) {
+                            if (JOB_NAME.contains("qlmaas")) {
                                 return ['QLM:disabled', 'myQLM:disabled', 'QLMaaS:selected']
                             } else {
                                 return ['QLM:selected', 'myQLM:disabled', 'QLMaaS:disabled']

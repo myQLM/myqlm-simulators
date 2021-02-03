@@ -59,7 +59,7 @@ properties([
     ],
     buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '10', daysToKeepStr: '', numToKeepStr: '50')),
     disableConcurrentBuilds(),
-    pipelineTriggers([pollSCM('')]),
+    //pipelineTriggers([pollSCM('')]),
     parameters([
 /*
         [$class: 'CascadeChoiceParameter', choiceType: 'PT_RADIO', description: '<br>', filterLength: 1, filterable: false, name: 'UI_PRODUCT', randomName: 'choice-parameter-266216487624195',

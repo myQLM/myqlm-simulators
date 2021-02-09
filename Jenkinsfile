@@ -27,12 +27,21 @@ if (HOST_NAME.equals("qlmci.usrnd.lan"))
 else
     LICENSE = "/etc/qlm/license"
 
-MAIN_PRODUCT         = params.UI_PRODUCT
-MAIN_PRODUCT_VERSION = params.UI_PRODUCT_VERSION
-MAIN_NIGHTLY_BUILD   = params.NIGHTLY_BUILD
-MAIN_BUILD_DATE      = params.MAIN_BUILD_DATE
+env.US_PRODUCT_NAME    = params.DS_PRODUCT_NAME
+env.US_PRODUCT_VERSION = params.DS_PRODUCT_VERSION
+env.US_BUILD_DATE      = params.DS_BUILD_DATE
+env.US_NIGHTLY_BUILD   = params.DS_NIGHTLY_BUILD
 
-env.BUILD_CAUSE     = currentBuild.getBuildCauses()[0].shortDescription.toString()
+env.BUILD_CAUSE      = currentBuild.getBuildCauses()[0].shortDescription.toString()
+env.BUILD_CAUSE_NAME = currentBuild.getBuildCauses()[0].userName.toString()
+
+/* PARAMETERS
+UI_PROJECT_VERSION
+UI_OSVERSION        <- Upstream
+UI_VERBOSE
+UI_TESTS            <- Upstream
+*/
+
 
 // ---------------------------------------------------------------------------
 //
@@ -61,35 +70,7 @@ properties([
     disableConcurrentBuilds(),
     //pipelineTriggers([pollSCM('')]),
     parameters([
-/*
-        [$class: 'CascadeChoiceParameter', choiceType: 'PT_RADIO', description: '<br>', filterLength: 1, filterable: false, name: 'UI_PRODUCT', randomName: 'choice-parameter-266216487624195',
-            referencedParameters: 'JOB_NAME',
-            script: [
-                $class: 'GroovyScript',
-                fallbackScript: [
-                    classpath: [],
-                    sandbox: false,
-                    script: ''
-                ],
-                script: [
-                    classpath: [],
-                    sandbox: false,
-                    script: '''
-                        if (JOB_NAME.contains("myqlm")) {
-                            return ['QLM:disabled', 'myQLM:selected', 'QLMaaS:disabled']
-                        } else {
-                            if (JOB_NAME.contains("qlmaas")) {
-                                return ['QLM:disabled', 'myQLM:disabled', 'QLMaaS:selected']
-                            } else {
-                                return ['QLM:selected', 'myQLM:disabled', 'QLMaaS:disabled']
-                            }
-                        }
-                    '''
-                ]
-            ]
-        ],
-*/
-        [$class: 'ChoiceParameter', choiceType: 'PT_SINGLE_SELECT', description: '', filterLength: 1, filterable: false, name: 'UI_VERSION', randomName: 'choice-parameter-266216487624196',
+        [$class: 'ChoiceParameter', choiceType: 'PT_SINGLE_SELECT', description: '', filterLength: 1, filterable: false, name: 'UI_PROJECT_VERSION', randomName: 'choice-parameter-266216487624196',
             script: [
                 $class: 'ScriptlerScript',
                 parameters: [
@@ -112,7 +93,7 @@ properties([
                     classpath: [],
                     sandbox: false,
                     script: '''
-                        return ['7.8', '8.2:selected' ,'8.3']
+                        return ['7.8', '8.2' ,'8.3:selected']
                     '''
                 ]
             ]
@@ -174,6 +155,16 @@ pipeline
 
     environment
     {
+        _ = sh returnStdout: false, script: '''set +x
+            git_base_url=ssh://bitbucketbdsfr.fsc.atos-services.net:7999/brq
+            if [[ $HOST_NAME =~ qlmci2 ]]; then
+                git_base_url=ssh://qlmjenkins@qlmgit.usrnd.lan:29418/qlm
+            fi
+            git_base_url_qat=${git_base_url}ext
+            git clone --single-branch --branch master $git_base_url/ci _ci
+            git clone --single-branch --branch master $git_base_url_qat/qat _qat
+        '''
+
         RUN_BY_JENKINS = 1
 
         BASEDIR          = "$WORKSPACE"
@@ -181,157 +172,40 @@ pipeline
         QATDIR           = "$BASEDIR/qat"
         QAT_REPO_BASEDIR = "$BASEDIR"
 
-        BLACK   = '\033[30m' ; B_BLACK   = '\033[1;30m'
-        RED     = '\033[31m' ; B_RED     = '\033[1;31m'
-        GREEN   = '\033[32m' ; B_GREEN   = '\033[1;32m'
-        YELLOW  = '\033[33m' ; B_YELLOW  = '\033[1;33m'
-        BLUE    = '\033[34m' ; B_BLUE    = '\033[1;34m'
-        MAGENTA = '\033[35m' ; B_MAGENTA = '\033[1;35m'
-        CYAN    = '\033[36m' ; B_CYAN    = '\033[1;36m'
-        WHITE   = '\033[97m' ; B_WHITE   = '\033[1;37m'
-
+        BLACK     = '\033[30m' ; B_BLACK   = '\033[1;30m'
+        RED       = '\033[31m' ; B_RED     = '\033[1;31m'
+        GREEN     = '\033[32m' ; B_GREEN   = '\033[1;32m'
+        YELLOW    = '\033[33m' ; B_YELLOW  = '\033[1;33m'
+        BLUE      = '\033[34m' ; B_BLUE    = '\033[1;34m'
+        MAGENTA   = '\033[35m' ; B_MAGENTA = '\033[1;35m'
+        CYAN      = '\033[36m' ; B_CYAN    = '\033[1;36m'
+        WHITE     = '\033[97m' ; B_WHITE   = '\033[1;37m'
         UNDERLINE = '\033[4m'
         RESET     = '\033[0m'
 
-        //BUILD_CAUSE      = currentBuild.getBuildCauses()[0].shortDescription.toString()
-        BUILD_CAUSE_NAME = currentBuild.getBuildCauses()[0].userName.toString()
+        OSLABEL                     = "rhel$UI_OSVERSION"
+        PY_VERSION                  = "py36"
+        OSLABEL_CROSS_COMPILATION   = "rhel8.3"
+        OS_CROSS_COMPILATION        = "el8"
 
-        OS = sh returnStdout: true, script: '''set +x
-            if [[ $UI_OSVERSION =~ ^7 ]]; then
-                echo -n "el7"
-            else
-                echo -n "el8"
-            fi
-        '''
+        OSVERSION                   = "${UI_OSVERSION}"
+        TESTS                       = "${UI_TESTS}"
 
-        OSLABEL                   = "rhel$UI_OSVERSION"
-        PY_VERSION                = "py36"
-
-        OSLABEL_CROSS_COMPILATION = "rhel8.2"
-        OS_CROSS_COMPILATION      = "el8"
-
-        OSLABEL_UNIT_TESTS_2      = "rhel8.2"
-        OS_UNIT_TESTS_2           = "el8"
-
-        NIGHTLY_BUILD = sh returnStdout: true, script: '''set +x
-            if [[ -n $MAIN_NIGHTLY_BUILD && $MAIN_NIGHTLY_BUILD != null ]]; then
-                nightly_build=${MAIN_NIGHTLY_BUILD}
-            else
-                nightly_build=false
-            fi
-            echo -n $nightly_build
-        '''
-
-        BUILD_TYPE = sh returnStdout: true, script: '''set +x
-            build_type=debug
-            [[ $BRANCH_NAME = rc ]] && build_type=release
-            echo -n $build_type
-        '''
-
-        REPO_TYPE = sh returnStdout: true, script: '''set +x
-            repo_type=dev
-            if [[ $BUILD_CAUSE =~ upstream ]]; then
-                if [[ $BRANCH_NAME = rc ]]; then
-                    repo_type=rc
-                else
-                    repo_type=mls
-                fi
-            fi
-            echo -n $repo_type
-        '''
-
-        QUALIFIED_REPO_NAME = sh returnStdout: true, script: '''set +x
-            qualified_repo_name=${JOB_NAME%%/*}
-            echo -n $qualified_repo_name
-        '''
-
-        JOB_QUALIFIER = sh returnStdout: true, script: '''set +x
-            job_qualifier=${JOB_NAME#*-}
-            job_qualifier=${job_qualifier#*-}
-            n=${JOB_NAME//[^-]}
-            if ((${#n} > 1)); then
-                job_qualifier="${job_qualifier%%/*}"
-            else
-                job_qualifier='-'
-            fi
-            echo -n $job_qualifier
-        '''
-
-        JOB_QUALIFIER_PATH = sh returnStdout: true, script: '''set +x
-            job_qualifier=${JOB_NAME#*-}
-            job_qualifier=${job_qualifier#*-}
-            n=${JOB_NAME//[^-]}
-            if ((${#n} > 1)); then
-                job_qualifier="/${job_qualifier%%/*}"
-            else
-                job_qualifier='-'
-            fi
-            job_qualifier_path="${job_qualifier//-//}"
-            echo -n $job_qualifier_path
-        '''
-
-        REPO_NAME = sh returnStdout: true, script: '''set +x
-            job_name=$JOB_NAME
-            if [[ ! $job_name =~ qat-functional-tests && \
-                    $job_name =~ ^qat-.*-.*$ ]]; then
-                job_name=${job_name%-*}
-                [[ $job_name =~ ^qat-.*-.*$ ]] && job_name=${job_name%-*}
-            fi
-            job_name=${job_name%%/*}
-            echo -n $job_name
-        '''
-
-        BUILD_DATE = sh returnStdout: true, script: '''set +x
-            if [[ -n $MAIN_BUILD_DATE && $MAIN_BUILD_DATE != null ]]; then
-                build_date=${MAIN_BUILD_DATE}
-            else
-                if [[ $HOST_NAME =~ qlmci2 ]]; then
-                    build_date=$(TZ=America/Phoenix && date +"%y%m%d.%H%M")
-                else
-                    build_date=$(TZ=Europe/Paris && date +"%y%m%d.%H%M")
-                fi
-            fi
-            echo -n $build_date
-        '''
-
-        PRODUCT_VERSION = sh returnStdout: true, script: '''set +x
-            # Clone ci repo
-            git_base_url=ssh://bitbucketbdsfr.fsc.atos-services.net:7999/brq
-            if [[ $HOST_NAME =~ qlmci2 ]]; then
-                git_base_url=ssh://qlmjenkins@qlmgit.usrnd.lan:29418/qlm
-            fi
-            git clone --single-branch --branch master $git_base_url/ci
-
-            if [[ $JOB_NAME =~ myqlm ]]; then
-                product=myqlm
-            elif [[ $JOB_NAME =~ qlmaas ]]; then
-                product=qlmaas
-            else
-                product=qlm
-            fi
-
-            if [[ -n $MAIN_PRODUCT_VERSION && $MAIN_PRODUCT_VERSION != null ]]; then
-                product_version=${MAIN_PRODUCT_VERSION}
-            else
-                product_version="$(cat $WORKSPACE/ci/share/versions/$product.version)"
-            fi
-            echo -n $product_version
-        '''
-
-        PRODUCT = sh returnStdout: true, script: '''set +x
-            if [[ -n $MAIN_PRODUCT && $MAIN_PRODUCT != null ]]; then
-                product=$MAIN_PRODUCT
-            else
-                if [[ $JOB_NAME =~ myqlm ]]; then
-                    product=myqlm
-                elif [[ $JOB_NAME =~ qlmaas ]]; then
-                    product=qlmaas
-                else
-                    product=qlm
-                fi
-            fi
-            echo -n $product
-        '''
+        OS                          = get_os()
+        REPO_NAME                   = get_repo_name(JOB_NAME)
+        JOB_QUALIFIER               = get_job_qualifier(JOB_NAME)
+        JOB_QUALIFIER_PATH          = get_job_qualifier_path(JOB_NAME)
+        PRODUCT_NAME                = get_product_name(JOB_NAME)
+        PROJECT_NAME                = get_project_name(JOB_NAME)
+        PRODUCT_VERSION             = get_product_version(JOB_NAME)
+        PROJECT_VERSION             = get_project_version(JOB_NAME)
+        BUILD_VERSION               = get_build_version(JOB_NAME, BRANCH_NAME, BUILD_NUMBER)
+        BUILD_DATE                  = get_build_date(HOST_NAME)
+        RPM_RELEASE                 = get_rpm_release(JOB_NAME, BRANCH_NAME, HOST_NAME)
+        BUILD_TYPE                  = get_build_type(BRANCH_NAME)
+        REPO_TYPE                   = get_repo_type(BUILD_CAUSE, BRANCH_NAME)
+        VERBOSE                     = get_verbose()
+        NIGHTLY_BUILD               = get_nightly_build()
     }
 
     stages
@@ -339,57 +213,18 @@ pipeline
         stage("init")
         {
             steps {
-                echo "${B_MAGENTA}[INIT]${RESET}"
-                echo "\
-params.MAIN_PRODUCT         = ${params.MAIN_PRODUCT}\n\
-params.MAIN_PRODUCT_VERSION = ${params.MAIN_PRODUCT_VERSION}\n\
-params.MAIN_BUILD_DATE      = ${params.MAIN_BUILD_DATE}\n\
-params.MAIN_NIGHTLY_BUILD   = ${params.MAIN_NIGHTLY_BUILD}\n\
-\n\
-UI_VERSION                  = ${UI_VERSION}\n\
-UI_OSVERSION                = ${UI_OSVERSION}\n\
-UI_VERBOSE                  = ${UI_VERBOSE}\n\
-UI_TESTS                    = ${UI_TESTS}\n\
-\n\
-CIDIR                       = ${CIDIR}\n\
-QATDIR                      = ${QATDIR}\n\
-QAT_REPO_BASEDIR            = ${QAT_REPO_BASEDIR}\n\
-\n\
-BUILD_CAUSE                 = ${BUILD_CAUSE}\n\
-BUILD_CAUSE_NAME            = ${BUILD_CAUSE_NAME}\n\
-\n\
-NIGHTLY_BUILD               = ${NIGHTLY_BUILD}\n\
-REPO_TYPE                   = ${REPO_TYPE}\n\
-QUALIFIED_REPO_NAME         = ${QUALIFIED_REPO_NAME}\n\
-JOB_QUALIFIER               = ${JOB_QUALIFIER}\n\
-JOB_QUALIFIER_PATH          = ${JOB_QUALIFIER_PATH}\n\
-REPO_NAME                   = ${REPO_NAME}\n\
-BUILD_DATE                  = ${BUILD_DATE}\n\
-PRODUCT_VERSION             = ${PRODUCT_VERSION}\n\
-PRODUCT                     = ${PRODUCT}\n\
-\n\
-"
-                sh '''set +x
-                    mkdir -p $REPO_NAME
-                    shopt -s extglob dotglob
-                    mv -- !(ci) $REPO_NAME/ 2>/dev/null || true
-
-                    git_base_url=ssh://bitbucketbdsfr.fsc.atos-services.net:7999/brq
-                    if [[ $HOST_NAME =~ qlmci2 ]]; then
-                        git_base_url=ssh://qlmjenkins@qlmgit.usrnd.lan:29418/qlm
-                    fi
-
-                    # Clone qat repo
-                    git_base_url_qat=${git_base_url}ext
-                    echo -e "\n--> Cloning qat, branch=master  [$git_base_url_qat] ..."
-                    cmd="git clone --single-branch --branch master $git_base_url_qat/qat"
-                    echo "> $cmd"
-                    eval $cmd
-
-                    ${CIDIR}/bin/clone_cross_compilation.sh "$CIDIR" "$git_base_url" "$REPO_NAME"
-                '''
-
                 script {
+                    display_environment_variables()
+                    sh '''set +x
+                        mkdir -p $REPO_NAME
+                        shopt -s extglob dotglob
+                        mv -- !(_ci|_qat) $REPO_NAME/ 2>/dev/null || true
+                        mv _ci ci; mv _qat qat
+
+                        # Clone cross-compilation if needed
+                        $WORKSPACE/ci/bin/clone_cross_compilation.sh $CIDIR $PROJECT_NAME
+                    '''
+
                     print "Loading build functions           ..."; build           = load "${CIDIR}/methods/build.groovy"
                     print "Loading install functions         ..."; install         = load "${CIDIR}/methods/install.groovy"
                     print "Loading internal functions        ..."; internal        = load "${CIDIR}/methods/internal.groovy"
@@ -402,7 +237,7 @@ PRODUCT                     = ${PRODUCT}\n\
                     support.badges()
 
                     // Do not check for semaphore if the job was started from upstream (main) to avoid a deadlock
-                    if (!env.BUILD_CAUSE_NAME.contains("null")) {
+                    if (!BUILD_CAUSE_NAME.contains("null")) {
                         lock('mainlock') {}
                     }
                 }
@@ -423,7 +258,7 @@ PRODUCT                     = ${PRODUCT}\n\
             when {
                 expression {
                     echo "${B_MAGENTA}"; echo "END SECTION"; echo "BEGIN SECTION: BUILD36"; echo "${RESET}"
-                    return internal.doit("$QUALIFIED_REPO_NAME", "BUILD36")
+                    return internal.doit("$PROJECT_NAME", "BUILD36")
                 }
                 beforeAgent true
             }
@@ -446,7 +281,7 @@ PRODUCT                     = ${PRODUCT}\n\
                 }
 
                 stage("build") {
-                    when { expression { return internal.doit("$QUALIFIED_REPO_NAME", "BUILD36", "$STAGE_NAME") } }
+                    when { expression { return internal.doit("$PROJECT_NAME", "BUILD36", "$STAGE_NAME") } }
                     steps {
                         script {
                             build.build("${env.STAGE_NAME}", "${env.OS}")
@@ -456,7 +291,7 @@ PRODUCT                     = ${PRODUCT}\n\
                 }
 
                 stage("rpm") {
-                    when { expression { return internal.doit("$QUALIFIED_REPO_NAME", "BUILD36", "$STAGE_NAME") } }
+                    when { expression { return internal.doit("$PROJECT_NAME", "BUILD36", "$STAGE_NAME") } }
                     steps {
                         script {
                             packaging.build_rpms()
@@ -465,7 +300,7 @@ PRODUCT                     = ${PRODUCT}\n\
                 }
 
                 stage("wheel") {
-                    when { expression { return internal.doit("$QUALIFIED_REPO_NAME", "BUILD36", "$STAGE_NAME") } }
+                    when { expression { return internal.doit("$PROJECT_NAME", "BUILD36", "$STAGE_NAME") } }
                     steps {
                         script {
                             packaging.build_wheels("${env.OS}")
@@ -476,8 +311,8 @@ PRODUCT                     = ${PRODUCT}\n\
                 stage("build-profiling") {
                     when {
                         allOf {
-                            expression { if (env.UI_TESTS.toLowerCase().contains("with code coverage")) { return true } else { return false } };
-                            expression { return internal.doit("$QUALIFIED_REPO_NAME", "BUILD36", "$STAGE_NAME") }
+                            expression { if (env.TESTS.toLowerCase().contains("with code coverage")) { return true } else { return false } };
+                            expression { return internal.doit("$PROJECT_NAME", "BUILD36", "$STAGE_NAME") }
                         }
                     }
                     steps {
@@ -496,7 +331,7 @@ PRODUCT                     = ${PRODUCT}\n\
             when {
                 expression {
                     echo "${B_MAGENTA}"; echo "END SECTION"; echo "BEGIN SECTION: BUILD38"; echo "${RESET}"
-                    return internal.doit("$QUALIFIED_REPO_NAME", "BUILD38")
+                    return internal.doit("$PROJECT_NAME", "BUILD38")
                 }
                 beforeAgent true
             }
@@ -511,7 +346,7 @@ PRODUCT                     = ${PRODUCT}\n\
             }
             stages {
                 stage("build") {
-                    when { expression { return internal.doit("$QUALIFIED_REPO_NAME", "BUILD38", "$STAGE_NAME") } }
+                    when { expression { return internal.doit("$PROJECT_NAME", "BUILD38", "$STAGE_NAME") } }
                     steps {
                         script {
                             build.build("${env.STAGE_NAME}", "${env.OS}")
@@ -521,7 +356,7 @@ PRODUCT                     = ${PRODUCT}\n\
                 }
 
                 stage("wheel") {
-                    when { expression { return internal.doit("$QUALIFIED_REPO_NAME", "BUILD38", "$STAGE_NAME") } }
+                    when { expression { return internal.doit("$PROJECT_NAME", "BUILD38", "$STAGE_NAME") } }
                     steps {
                         script {
                             packaging.build_wheels("${env.OS}")
@@ -536,7 +371,7 @@ PRODUCT                     = ${PRODUCT}\n\
             when {
                 expression {
                     echo "${B_MAGENTA}"; echo "END SECTION"; echo "BEGIN SECTION: CROSS_COMPILATION"; echo "${RESET}"
-                    return internal.doit("$QUALIFIED_REPO_NAME", "CROSS-COMPILATION")
+                    return internal.doit("$PROJECT_NAME", "CROSS-COMPILATION")
                 }
                 beforeAgent true
             }
@@ -560,7 +395,7 @@ PRODUCT                     = ${PRODUCT}\n\
                 }
 
                 stage("wheel") {
-                    when { expression { return internal.doit("$QUALIFIED_REPO_NAME", "CROSS-COMPILATION", "$STAGE_NAME") } }
+                    when { expression { return internal.doit("$PROJECT_NAME", "CROSS-COMPILATION", "$STAGE_NAME") } }
                     steps {
                         script {
                             packaging.wheel_cross_compilation("${env.OS}")
@@ -575,7 +410,7 @@ PRODUCT                     = ${PRODUCT}\n\
             when {
                 expression {
                     echo "${B_MAGENTA}"; echo "END SECTION"; echo "BEGIN SECTION: STATIC_ANALYSIS"; echo "${RESET}"
-                    return internal.doit("$QUALIFIED_REPO_NAME", "STATIC-ANALYSIS")
+                    return internal.doit("$PROJECT_NAME", "STATIC-ANALYSIS")
                 }
             }
             agent {
@@ -594,7 +429,7 @@ PRODUCT                     = ${PRODUCT}\n\
                     parallel
                     {
                         stage("cppcheck") {
-                            when { expression { return internal.doit("$QUALIFIED_REPO_NAME", "STATIC-ANALYSIS", "$STAGE_NAME") } }
+                            when { expression { return internal.doit("$PROJECT_NAME", "STATIC-ANALYSIS", "$STAGE_NAME") } }
                             steps {
                                 script {
                                     static_analysis.cppcheck()
@@ -603,7 +438,7 @@ PRODUCT                     = ${PRODUCT}\n\
                         }
 
                         stage("pylint") {
-                            when { expression { return internal.doit("$QUALIFIED_REPO_NAME", "STATIC-ANALYSIS", "$STAGE_NAME") } }
+                            when { expression { return internal.doit("$PROJECT_NAME", "STATIC-ANALYSIS", "$STAGE_NAME") } }
                             steps {
                                 script {
                                     static_analysis.pylint()
@@ -612,7 +447,7 @@ PRODUCT                     = ${PRODUCT}\n\
                         }
 
                         stage("flake8") {
-                            when { expression { return internal.doit("$QUALIFIED_REPO_NAME", "STATIC-ANALYSIS", "$STAGE_NAME") } }
+                            when { expression { return internal.doit("$PROJECT_NAME", "STATIC-ANALYSIS", "$STAGE_NAME") } }
                             steps {
                                 script {
                                     static_analysis.flake8()
@@ -630,9 +465,9 @@ PRODUCT                     = ${PRODUCT}\n\
                 allOf {
                     expression {
                         echo "${B_MAGENTA}"; echo "END SECTION"; echo "BEGIN SECTION: UNIT_TESTS"; echo "${RESET}"
-                        if (env.UI_TESTS.toLowerCase().contains("skip")) { return false } else { return true }
+                        if (env.TESTS.toLowerCase().contains("skip")) { return false } else { return true }
                     };
-                    expression { return internal.doit("$QUALIFIED_REPO_NAME", "UNIT-TESTS") }
+                    expression { return internal.doit("$PROJECT_NAME", "UNIT-TESTS") }
                 }
             }
             environment {
@@ -655,7 +490,7 @@ PRODUCT                     = ${PRODUCT}\n\
                     when {
                         expression {
                             echo "${B_MAGENTA}--------------------- [[ UNIT-TESTS ]] ---------------------${RESET}"
-                            return internal.doit("$QUALIFIED_REPO_NAME", "UNIT-TESTS", "UNIT-TESTS")
+                            return internal.doit("$PROJECT_NAME", "UNIT-TESTS", "UNIT-TESTS")
                         }
                         beforeAgent true
                     }
@@ -681,7 +516,7 @@ PRODUCT                     = ${PRODUCT}\n\
                     when {
                         expression {
                             echo "${B_MAGENTA}--------------------- [[ UNIT-TESTS-GPU ]] ---------------------${RESET}"
-                            return internal.doit("$QUALIFIED_REPO_NAME", "UNIT-TESTS", "UNIT-TESTS-GPU")
+                            return internal.doit("$PROJECT_NAME", "UNIT-TESTS", "UNIT-TESTS-GPU")
                         }
                         beforeAgent true
                     }
@@ -699,7 +534,7 @@ PRODUCT                     = ${PRODUCT}\n\
                     when {
                         expression {
                             echo "${B_MAGENTA}--------------------- [[ UNIT-TESTS-REPORTING ]] ---------------------${RESET}"
-                            return internal.doit("$QUALIFIED_REPO_NAME", "UNIT-TESTS", "UNIT-TESTS-REPORTING")
+                            return internal.doit("$PROJECT_NAME", "UNIT-TESTS", "UNIT-TESTS-REPORTING")
                         }
                         beforeAgent true
                     }
@@ -765,3 +600,286 @@ PRODUCT                     = ${PRODUCT}\n\
         }
     } // post
 } // pipeline
+
+
+/*
+-----------------------------------------------------------------------------------------------------------
+GETTER FUNCTIONS
+-----------------------------------------------------------------------------------------------------------
+*/
+
+/*
+GET_REPO_NAME
+*/
+def get_repo_name(job_name)
+{
+    def reponames = [
+        [project_name:"qat-tutorial-qlm",         repo_name:"qat-tutorial"],
+        [project_name:"qat-tutorial-myqlm",       repo_name:"qat-tutorial"],
+        [project_name:"qat-tutorial-qlmaas",      repo_name:"qat-tutorial"],
+        [project_name:"qat-qlmaas-client",        repo_name:"qat-qlmaas"],
+        [project_name:"qat-qlmaas-server-common", repo_name:"qat-qlmaas"],
+        [project_name:"qat-qlmaas-server-django", repo_name:"qat-qlmaas"],
+        [project_name:"qat-qlmaas-server-qlm",    repo_name:"qat-qlmaas"]
+    ]
+
+    def project_name = get_project_name(job_name)
+
+    //reponames.each {entry -> println "$entry.project_name: $entry.repo_name"}
+    def repo_name = reponames.find { it.project_name == "$project_name" }?.repo_name
+    if (repo_name)
+        return repo_name
+    else
+        return project_name
+}
+
+/*
+GET_JOB_QUALIFIER
+*/
+def get_job_qualifier(job_name)
+{
+    def project_name = get_project_name(job_name)
+
+    if (project_name.count('-') <= 1)
+        return "-"
+ 
+    c = project_name.indexOf('-', 4)        // Start after xxx-
+    return project_name.substring(c+1).replaceAll('/','-')
+}
+
+/*
+GET_JOB_QUALIFIER_PATH
+*/
+def get_job_qualifier_path(job_name)
+{
+    def job_qualifier_with_dashes = get_job_qualifier(job_name)
+    job_qualifier_with_slashes = job_qualifier_with_dashes.replaceAll('-','/')
+    if (! job_qualifier_with_slashes.startsWith('/'))
+        job_qualifier_with_slashes = "/${job_qualifier_with_slashes}"
+    return job_qualifier_with_slashes
+}
+
+/*
+GET_PRODUCT_NAME
+*/
+def get_product_name(job_name) 
+{
+    if (! US_PRODUCT_NAME.equals("null"))
+        return US_PRODUCT_NAME.toLowerCase()   // all
+
+    def product_name
+    if (job_name.contains("myqlm"))
+        product_name = "myqlm"
+    else if (job_name.contains("qlmaas"))
+        product_name = "qlmaas"
+    else
+        product_name = "qlm"
+    return product_name
+}
+
+/*
+GET_PROJECT_NAME
+*/
+def get_project_name(job_name)
+{
+    def job_name_with_branch = job_name.tokenize('/') as String[]
+    return job_name_with_branch[0]
+}
+
+/*
+GET_PRODUCT_VERSION
+*/
+def get_product_version(job_name) 
+{
+    if (! US_PRODUCT_VERSION.equals("null"))
+        return US_PRODUCT_VERSION
+
+    def product_name = get_product_name(job_name)
+    def product_version = new File("$WORKSPACE/_ci/share/versions/${product_name}.version").text
+    return product_version
+}
+
+/*
+GET_PROJECT_VERSION
+*/
+def get_project_version(job_name) 
+{
+    if (! UI_PROJECT_VERSION.equals("null"))
+        return UI_PROJECT_VERSION
+
+    def project_name = get_project_name(job_name)
+    def project_version = new File("$WORKSPACE/_qat/share/versions/${project_name}.version").text
+    return project_version
+}
+
+/*
+GET_BUILD_VERSION
+*/
+def get_build_version(job_name, branch_name, build_number)
+{
+    def project_version = get_project_version(job_name)
+    def build_version = project_version 
+    if (! branch_name.equals("rc"))
+        build_version = project_version + "." + build_number
+    return build_version
+}
+
+/*
+GET_BUILD_DATE
+*/
+def get_build_date(hostname)
+{
+    if (! US_BUILD_DATE.equals("null"))
+        return US_BUILD_DATE
+
+    def tz
+    if (hostname.contains("qlmci2"))
+        tz = TimeZone.getTimeZone("America/Phoenix")
+    else
+        tz = TimeZone.getTimeZone("Europe/Paris")
+    return new Date().format("yyMMdd.HHmm", tz)
+}
+
+/*
+GET_RPM_RELEASE
+*/
+def get_rpm_release(job_name, branch_name, hostname)
+{
+    def rpm_release
+    if (branch_name.equals("rc"))
+        rpm_release = "bull" + "." + get_product_version(job_name)
+    else
+        rpm_release = "bull" + "." + get_build_date(hostname)
+    return rpm_release
+}
+
+/*
+GET_BUILD_TYPE
+*/
+def get_build_type(branch_name)
+{
+    def build_type
+    if (branch_name.equals("rc"))
+        build_type = "release"
+    else
+        build_type = "debug"
+    return build_type
+
+}
+
+/*
+GET_REPO_TYPE
+*/
+def get_repo_type(build_cause, branch_name)
+{
+    def repo_type = "dev"
+    if (build_cause.equals("upstream"))
+        if (branch_name.equals("rc"))
+            build_type = "rc"
+        else
+            build_type = "mls"
+    return repo_type
+
+}
+
+/*
+GET_VERBOSE
+*/
+def get_verbose()
+{
+    if (UI_VERBOSE)
+        if (UI_VERBOSE.equals("true"))
+            return "true"
+        else
+            return "false"
+    else
+        return "false"
+}
+
+/*
+GET_NIGHTLY_BUILD
+*/
+def get_nightly_build()
+{
+    if (! US_NIGHTLY_BUILD.equals("null"))
+        return US_NIGHTLY_BUILD
+    return "false"
+}
+
+/*
+GET_OS
+*/
+def get_os()
+{
+    if (UI_OSVERSION.startsWith("7."))
+        return "el7"
+    else if (UI_OSVERSION.startsWith("8."))
+        return "el8"
+    else if (UI_OSVERSION.startsWith("9."))
+        return "el9"
+    return "elx"
+}
+
+/*
+DISPLAY_ENVIRONMENT_VARIABLES
+*/
+def display_environment_variables()
+{
+    echo "${B_MAGENTA}[INIT]${RESET}"
+    echo "\
+JOB_NAME                    = ${JOB_NAME}\n\
+WORKSPACE                   = ${WORKSPACE}\n\
+BRANCH_NAME                 = ${BRANCH_NAME}\n\
+HOST_NAME                   = ${HOST_NAME}\n\
+\n\
+OS                          = ${OS}\n\
+OSLABEL                     = ${OSLABEL}\n\
+PY_VERSION                  = ${PY_VERSION}\n\
+OSLABEL_CROSS_COMPILATION   = ${OSLABEL_CROSS_COMPILATION}\n\
+OS_CROSS_COMPILATION        = ${OS_CROSS_COMPILATION}\n\
+\n\
+UPSTREAM PARAMETERS\n\
+-------------------\n\
+US_PRODUCT_NAME             = ${US_PRODUCT_NAME}\n\
+US_PRODUCT_VERSION          = ${US_PRODUCT_VERSION}\n\
+US_BUILD_DATE               = ${US_BUILD_DATE}\n\
+US_NIGHTLY_BUILD            = ${US_NIGHTLY_BUILD}\n\
+\n\
+THIS JOB PARAMETERS\n\
+-------------------\n\
+UI_PROJECT_VERSION          = ${UI_PROJECT_VERSION}\n\
+UI_OSVERSION                = ${UI_OSVERSION}\n\
+UI_VERBOSE                  = ${UI_VERBOSE}\n\
+UI_TESTS                    = ${UI_TESTS}\n\
+\n\
+CONSOLIDATED VARIABLES\n\
+----------------------\n\
+PRODUCT_NAME                = ${PRODUCT_NAME}\n\
+PRODUCT_VERSION             = ${PRODUCT_VERSION}\n\
+BUILD_DATE                  = ${BUILD_DATE}\n\
+OSVERSION                   = ${OSVERSION}\n\
+TESTS                       = ${TESTS}\n\
+VERBOSE                     = ${VERBOSE}\n\
+NIGHTLY_BUILD               = ${NIGHTLY_BUILD}\n\
+\n\
+PROJECT_VERSION             = ${PROJECT_VERSION}\n\
+RPM_RELEASE                 = ${RPM_RELEASE}\n\
+BUILD_VERSION               = ${BUILD_VERSION}\n\
+\n\
+BUILD_CAUSE                 = ${BUILD_CAUSE}\n\
+BUILD_CAUSE_NAME            = ${BUILD_CAUSE_NAME}\n\
+\n\
+REPO_TYPE                   = ${REPO_TYPE}\n\
+REPO_NAME                   = ${REPO_NAME}\n\
+PROJECT_NAME                = ${PROJECT_NAME}\n\
+JOB_QUALIFIER               = ${JOB_QUALIFIER}\n\
+JOB_QUALIFIER_PATH          = ${JOB_QUALIFIER_PATH}\n\
+\n\
+BASEDIR                     = ${BASEDIR}\n\
+CIDIR                       = ${CIDIR}\n\
+QATDIR                      = ${QATDIR}\n\
+QAT_REPO_BASEDIR            = ${QAT_REPO_BASEDIR}\n\
+\n\
+"
+}
+

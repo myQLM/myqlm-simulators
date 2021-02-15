@@ -221,7 +221,7 @@ pipeline
                         mv -- !(_ci|_qat) $REPO_NAME/ 2>/dev/null || true
                         mv _ci ci; mv _qat qat
 
-                        # Clone cross-compilation if needed
+                        # Clone cross compilation if needed
                         $WORKSPACE/ci/bin/clone_cross_compilation.sh $CIDIR $PROJECT_NAME
                     '''
 
@@ -273,6 +273,7 @@ pipeline
             }
             stages {
                 stage("linguist") {
+                    when { expression { return internal.doit("$PROJECT_NAME", "BUILD36", "$STAGE_NAME") } }
                     steps {
                         script {
                             support.linguist()
@@ -285,6 +286,14 @@ pipeline
                     steps {
                         script {
                             build.build("${env.STAGE_NAME}", "${env.OS}")
+                        }
+                    }
+                }
+
+                stage("install") {
+                    when { expression { return internal.doit("$PROJECT_NAME", "BUILD36", "$STAGE_NAME") } }
+                    steps {
+                        script {
                             install.install("${env.OS}")
                         }
                     }
@@ -308,7 +317,7 @@ pipeline
                     }
                 }
 
-                stage("build-profiling") {
+                stage("build_profiling") {
                     when {
                         allOf {
                             expression { if (env.TESTS.toLowerCase().contains("with code coverage")) { return true } else { return false } };
@@ -350,6 +359,14 @@ pipeline
                     steps {
                         script {
                             build.build("${env.STAGE_NAME}", "${env.OS}")
+                        }
+                    }
+                }
+
+                stage("install") {
+                    when { expression { return internal.doit("$PROJECT_NAME", "BUILD38", "$STAGE_NAME") } }
+                    steps {
+                        script {
                             install.install("${env.OS}")
                         }
                     }
@@ -366,12 +383,12 @@ pipeline
             }
         }
 
-        stage("CROSS-COMPILATION")
+        stage("CROSS_COMPILATION")
         {
             when {
                 expression {
                     echo "${B_MAGENTA}"; echo "END SECTION"; echo "BEGIN SECTION: CROSS_COMPILATION"; echo "${RESET}"
-                    return internal.doit("$PROJECT_NAME", "CROSS-COMPILATION")
+                    return internal.doit("$PROJECT_NAME", "CROSS_COMPILATION")
                 }
                 beforeAgent true
             }
@@ -395,7 +412,7 @@ pipeline
                 }
 
                 stage("wheel") {
-                    when { expression { return internal.doit("$PROJECT_NAME", "CROSS-COMPILATION", "$STAGE_NAME") } }
+                    when { expression { return internal.doit("$PROJECT_NAME", "CROSS_COMPILATION", "$STAGE_NAME") } }
                     steps {
                         script {
                             packaging.wheel_cross_compilation("${env.OS}")
@@ -405,12 +422,12 @@ pipeline
             }
         }
 
-        stage("STATIC-ANALYSIS")
+        stage("STATIC_ANALYSIS")
         {
             when {
                 expression {
                     echo "${B_MAGENTA}"; echo "END SECTION"; echo "BEGIN SECTION: STATIC_ANALYSIS"; echo "${RESET}"
-                    return internal.doit("$PROJECT_NAME", "STATIC-ANALYSIS")
+                    return internal.doit("$PROJECT_NAME", "STATIC_ANALYSIS")
                 }
             }
             agent {
@@ -424,12 +441,12 @@ pipeline
             }
             stages
             {
-                stage("static-analysis")
+                stage("static_analysis")
                 {
                     parallel
                     {
                         stage("cppcheck") {
-                            when { expression { return internal.doit("$PROJECT_NAME", "STATIC-ANALYSIS", "$STAGE_NAME") } }
+                            when { expression { return internal.doit("$PROJECT_NAME", "STATIC_ANALYSIS", "$STAGE_NAME") } }
                             steps {
                                 script {
                                     static_analysis.cppcheck()
@@ -438,7 +455,7 @@ pipeline
                         }
 
                         stage("pylint") {
-                            when { expression { return internal.doit("$PROJECT_NAME", "STATIC-ANALYSIS", "$STAGE_NAME") } }
+                            when { expression { return internal.doit("$PROJECT_NAME", "STATIC_ANALYSIS", "$STAGE_NAME") } }
                             steps {
                                 script {
                                     static_analysis.pylint()
@@ -447,7 +464,7 @@ pipeline
                         }
 
                         stage("flake8") {
-                            when { expression { return internal.doit("$PROJECT_NAME", "STATIC-ANALYSIS", "$STAGE_NAME") } }
+                            when { expression { return internal.doit("$PROJECT_NAME", "STATIC_ANALYSIS", "$STAGE_NAME") } }
                             steps {
                                 script {
                                     static_analysis.flake8()
@@ -459,7 +476,7 @@ pipeline
             }
         }
 
-        stage("UNIT-TESTS")
+        stage("UNIT_TESTS")
         {
             when {
                 allOf {
@@ -467,7 +484,7 @@ pipeline
                         echo "${B_MAGENTA}"; echo "END SECTION"; echo "BEGIN SECTION: UNIT_TESTS"; echo "${RESET}"
                         if (env.TESTS.toLowerCase().contains("skip")) { return false } else { return true }
                     };
-                    expression { return internal.doit("$PROJECT_NAME", "UNIT-TESTS") }
+                    expression { return internal.doit("$PROJECT_NAME", "UNIT_TESTS") }
                 }
             }
             environment {
@@ -486,11 +503,11 @@ pipeline
             }
             stages
             {
-                stage("unit-tests") {
+                stage("unit_tests") {
                     when {
                         expression {
-                            echo "${B_MAGENTA}--------------------- [[ UNIT-TESTS ]] ---------------------${RESET}"
-                            return internal.doit("$PROJECT_NAME", "UNIT-TESTS", "UNIT-TESTS")
+                            echo "${B_MAGENTA}--------------------- [[ UNIT_TESTS ]] ---------------------${RESET}"
+                            return internal.doit("$PROJECT_NAME", "UNIT_TESTS", "UNIT_TESTS")
                         }
                         beforeAgent true
                     }
@@ -511,12 +528,19 @@ pipeline
                     }
                 }
 
-                stage("unit-tests-gpu")
+                stage("unit_tests_gpu")
                 {
                     when {
-                        expression {
-                            echo "${B_MAGENTA}--------------------- [[ UNIT-TESTS-GPU ]] ---------------------${RESET}"
-                            return internal.doit("$PROJECT_NAME", "UNIT-TESTS", "UNIT-TESTS-GPU")
+                        allOf {
+                            expression {
+                                echo "${B_MAGENTA}--------------------- [[ UNIT_TESTS_GPU ]] ---------------------${RESET}"
+                                return internal.doit("$PROJECT_NAME", "UNIT_TESTS", "UNIT_TESTS_GPU")
+                            };
+                            expression {
+                                if (HOST_NAME.contains("qlmci2"))
+                                    return false
+                                return true
+                            }
                         }
                         beforeAgent true
                     }
@@ -529,12 +553,12 @@ pipeline
                     }
                 }
 
-                stage("unit-tests-reporting")
+                stage("unit_tests_reporting")
                 {
                     when {
                         expression {
-                            echo "${B_MAGENTA}--------------------- [[ UNIT-TESTS-REPORTING ]] ---------------------${RESET}"
-                            return internal.doit("$PROJECT_NAME", "UNIT-TESTS", "UNIT-TESTS-REPORTING")
+                            echo "${B_MAGENTA}--------------------- [[ UNIT_TESTS_REPORTING ]] ---------------------${RESET}"
+                            return internal.doit("$PROJECT_NAME", "UNIT_TESTS", "UNIT_TESTS_REPORTING")
                         }
                         beforeAgent true
                     }

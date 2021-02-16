@@ -797,7 +797,7 @@ GET_REPO_TYPE
 def get_repo_type(build_cause, branch_name)
 {
     def repo_type = "dev"
-    if (build_cause.equals("upstream"))
+    if (build_cause.contains("upstream"))
         if (branch_name.equals("rc"))
             build_type = "rc"
         else

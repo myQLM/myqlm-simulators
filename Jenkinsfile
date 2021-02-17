@@ -429,6 +429,7 @@ pipeline
                     echo "${B_MAGENTA}"; echo "END SECTION"; echo "BEGIN SECTION: STATIC_ANALYSIS"; echo "${RESET}"
                     return internal.doit("$PROJECT_NAME", "STATIC_ANALYSIS")
                 }
+                beforeAgent true
             }
             agent {
                 docker {

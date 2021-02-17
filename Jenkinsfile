@@ -476,15 +476,15 @@ pipeline
             }
         }
 
-        stage("UNIT_TESTS")
+        stage("TESTS")
         {
             when {
                 allOf {
                     expression {
-                        echo "${B_MAGENTA}"; echo "END SECTION"; echo "BEGIN SECTION: UNIT_TESTS"; echo "${RESET}"
+                        echo "${B_MAGENTA}"; echo "END SECTION"; echo "BEGIN SECTION: TESTS"; echo "${RESET}"
                         if (env.TESTS.toLowerCase().contains("skip")) { return false } else { return true }
                     };
-                    expression { return internal.doit("$PROJECT_NAME", "UNIT_TESTS") }
+                    expression { return internal.doit("$PROJECT_NAME", "TESTS") }
                 }
             }
             environment {
@@ -503,11 +503,32 @@ pipeline
             }
             stages
             {
-                stage("unit_tests") {
+                stage("unit_tests_host") {
                     when {
                         expression {
-                            echo "${B_MAGENTA}--------------------- [[ UNIT_TESTS ]] ---------------------${RESET}"
-                            return internal.doit("$PROJECT_NAME", "UNIT_TESTS", "UNIT_TESTS")
+                            echo "${B_MAGENTA}--------------------- [[ UNIT_TESTS (host) ]] ---------------------${RESET}"
+                            if (OSVERSION.startsWith("8."))
+                                return true 
+                            return false
+                        }
+                        beforeAgent true
+                    }
+                    agent none
+                    steps {
+                        script {
+                            support.restore_deps_tarballs("$STAGE_NAME")
+                            test.tests("$STAGE_NAME", "${env.OS}")
+                        }
+                    }
+                }
+
+                stage("unit_tests_container") {
+                    when {
+                        expression {
+                            echo "${B_MAGENTA}--------------------- [[ UNIT_TESTS (container) ]] ---------------------${RESET}"
+                            if (!OSVERSION.startsWith("8."))
+                                return true 
+                            return false
                         }
                         beforeAgent true
                     }
@@ -522,32 +543,7 @@ pipeline
                     }
                     steps {
                         script {
-                            support.restore_dependencies_tarballs("$STAGE_NAME")
-                            test.tests("$STAGE_NAME", "${env.OS}")
-                        }
-                    }
-                }
-
-                stage("unit_tests_gpu")
-                {
-                    when {
-                        allOf {
-                            expression {
-                                echo "${B_MAGENTA}--------------------- [[ UNIT_TESTS_GPU ]] ---------------------${RESET}"
-                                return internal.doit("$PROJECT_NAME", "UNIT_TESTS", "UNIT_TESTS_GPU")
-                            };
-                            expression {
-                                if (HOST_NAME.contains("qlmci2"))
-                                    return false
-                                return true
-                            }
-                        }
-                        beforeAgent true
-                    }
-                    agent none
-                    steps {
-                        script {
-                            support.restore_dependencies_tarballs("$STAGE_NAME")
+                            support.restore_deps_tarballs("$STAGE_NAME")
                             test.tests("$STAGE_NAME", "${env.OS}")
                         }
                     }
@@ -558,7 +554,7 @@ pipeline
                     when {
                         expression {
                             echo "${B_MAGENTA}--------------------- [[ UNIT_TESTS_REPORTING ]] ---------------------${RESET}"
-                            return internal.doit("$PROJECT_NAME", "UNIT_TESTS", "UNIT_TESTS_REPORTING")
+                            return internal.doit("$PROJECT_NAME", "TESTS", "UNIT_TESTS_REPORTING")
                         }
                         beforeAgent true
                     }

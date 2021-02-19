@@ -255,6 +255,12 @@ pipeline
 
         stage("BUILD36")
         {
+            environment {
+                BUILD_DIR                  = support.getenv("BUILD_DIR",   "linux", "${env.OS}", "python36")
+                TESTS_REPORTS_DIR          = "$REPO_NAME/$BUILD_DIR/tests/reports"
+                TESTS_REPORTS_DIR_VALGRIND = "$TESTS_REPORTS_DIR/valgrind"
+                VALGRIND_ARGS              = "--fair-sched=no --child-silent-after-fork=yes --tool=memcheck --xml=yes --xml-file=$WORKSPACE/$TESTS_REPORTS_DIR_VALGRIND/report.xml --leak-check=full --show-leak-kinds=all --show-reachable=no --track-origins=yes --run-libc-freeres=no --gen-suppressions=all --suppressions=$QATDIR/share/misc/valgrind.supp"
+            }
             when {
                 expression {
                     echo "${B_MAGENTA}"; echo "END SECTION"; echo "BEGIN SECTION: BUILD36"; echo "${RESET}"
@@ -336,7 +342,7 @@ pipeline
 
 
         stage("BUILD38")
-        {
+        { 
             when {
                 expression {
                     echo "${B_MAGENTA}"; echo "END SECTION"; echo "BEGIN SECTION: BUILD38"; echo "${RESET}"
@@ -500,7 +506,6 @@ pipeline
                 TESTS_REPORTS_DIR_VALGRIND   = "$TESTS_REPORTS_DIR/valgrind"
                 TESTS_REPORTS_DIR_COVERAGE   = "$TESTS_REPORTS_DIR/coverage"
                 TESTS_REPORTS_DIR_COVERAGEPY = "$REPO_NAME/${BUILD_DIR}/tests/htmlcov"
-                VALGRIND_ARGS                = "--fair-sched=no --child-silent-after-fork=yes --tool=memcheck --xml=yes --xml-file=$WORKSPACE/$TESTS_REPORTS_DIR_VALGRIND/report.xml --leak-check=full --show-leak-kinds=all --show-reachable=no --track-origins=yes --run-libc-freeres=no --gen-suppressions=all --suppressions=$QAT"
             }
             stages
             {

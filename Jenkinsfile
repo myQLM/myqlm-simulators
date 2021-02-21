@@ -22,10 +22,12 @@ try {   // Use on new jobs
 HOST_NAME     = InetAddress.getLocalHost().getHostName()
 env.HOST_NAME = "$HOST_NAME"
 
+/*
 if (HOST_NAME.equals("qlmci.usrnd.lan"))
     LICENSE = "/etc/qlm/license_nogpu"
 else
     LICENSE = "/etc/qlm/license"
+*/
 
 env.US_PRODUCT_NAME    = params.DS_PRODUCT_NAME
 env.US_PRODUCT_VERSION = params.DS_PRODUCT_VERSION
@@ -188,6 +190,9 @@ pipeline
         OSLABEL_CROSS_COMPILATION   = "rhel8.3"
         OS_CROSS_COMPILATION        = "el8"
 
+        DOCKER_ARGS                 = get_docker_args(UI_OSVERSION)
+        DOCKER_ARGS_CROSS           = get_docker_args("8.3")
+
         OSVERSION                   = "${UI_OSVERSION}"
         TESTS                       = "${UI_TESTS}"
 
@@ -256,10 +261,7 @@ pipeline
         stage("BUILD36")
         {
             environment {
-                BUILD_DIR                  = support.getenv("BUILD_DIR",   "linux", "${env.OS}", "python36")
-                TESTS_REPORTS_DIR          = "$REPO_NAME/$BUILD_DIR/tests/reports"
-                TESTS_REPORTS_DIR_VALGRIND = "$TESTS_REPORTS_DIR/valgrind"
-                VALGRIND_ARGS              = "--fair-sched=no --child-silent-after-fork=yes --tool=memcheck --xml=yes --xml-file=$WORKSPACE/$TESTS_REPORTS_DIR_VALGRIND/report.xml --leak-check=full --show-leak-kinds=all --show-reachable=no --track-origins=yes --run-libc-freeres=no --gen-suppressions=all --suppressions=$QATDIR/share/misc/valgrind.supp"
+                VALGRIND_ARGS = "--fair-sched=no --child-silent-after-fork=yes --tool=memcheck --xml=yes --xml-file=$WORKSPACE/valgrind/report.xml --leak-check=full --show-leak-kinds=all --show-reachable=no --track-origins=yes --run-libc-freeres=no --gen-suppressions=all --suppressions=$QATDIR/share/misc/valgrind.supp"
             }
             when {
                 expression {
@@ -272,7 +274,7 @@ pipeline
                 docker {
                     label "${LABEL}"
                     image "qlm-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL}-${PY_VERSION}:latest"
-                    args "-v /var/lib/jenkins/.ssh:/var/lib/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v$LICENSE:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools"
+                    args "$DOCKER_ARGS"
                     alwaysPull false
                     reuseNode true
                 }
@@ -354,7 +356,7 @@ pipeline
                 docker {
                     label "${LABEL}"
                     image "qlm-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL_CROSS_COMPILATION}-py38:latest"
-                    args "-v /var/lib/jenkins/.ssh:/var/lib/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v$LICENSE:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools"
+                    args "$DOCKER_ARGS_CROSS"
                     alwaysPull false
                     reuseNode true
                 }
@@ -402,7 +404,7 @@ pipeline
                 docker {
                     label "${LABEL}"
                     image "qlm-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL_CROSS_COMPILATION}-${PY_VERSION}:latest"
-                    args "-v /var/lib/jenkins/.ssh:/var/lib/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v$LICENSE:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools"
+                    args "$DOCKER_ARGS_CROSS"
                     alwaysPull false
                     reuseNode true
                 }
@@ -441,7 +443,7 @@ pipeline
                 docker {
                     label "${LABEL}"
                     image "qlm-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL}-${PY_VERSION}:latest"
-                    args "-v /var/lib/jenkins/.ssh:/var/lib/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v$LICENSE:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools"
+                    args "$DOCKER_ARGS"
                     alwaysPull false
                     reuseNode true
                 }
@@ -503,38 +505,16 @@ pipeline
                 TESTS_REPORTS_DIR_CUNIT      = "$TESTS_REPORTS_DIR/cunit"
                 TESTS_REPORTS_DIR_GTEST      = "$TESTS_REPORTS_DIR/gtest"
                 GTEST_OUTPUT                 = "xml:$WORKSPACE/$TESTS_REPORTS_DIR_GTEST/"
-                TESTS_REPORTS_DIR_VALGRIND   = "$TESTS_REPORTS_DIR/valgrind"
                 TESTS_REPORTS_DIR_COVERAGE   = "$TESTS_REPORTS_DIR/coverage"
                 TESTS_REPORTS_DIR_COVERAGEPY = "$REPO_NAME/${BUILD_DIR}/tests/htmlcov"
             }
             stages
             {
-                stage("unit_tests_host") {
+                stage("unit_tests") {
                     when {
                         expression {
-                            echo "${B_MAGENTA}--------------------- [[ UNIT_TESTS (host) ]] ---------------------${RESET}"
-                            if (OSVERSION.startsWith("8."))
-                                return true 
-                            return false
-                        }
-                        beforeAgent true
-                    }
-                    agent none
-                    steps {
-                        script {
-                            support.restore_deps_tarballs("$STAGE_NAME")
-                            test.tests("$STAGE_NAME", "${env.OS}")
-                        }
-                    }
-                }
-
-                stage("unit_tests_container") {
-                    when {
-                        expression {
-                            echo "${B_MAGENTA}--------------------- [[ UNIT_TESTS (container) ]] ---------------------${RESET}"
-                            if (!OSVERSION.startsWith("8."))
-                                return true 
-                            return false
+                            echo "${B_MAGENTA}--------------------- [[ UNIT_TESTS ]] ---------------------${RESET}"
+                            return internal.doit("$PROJECT_NAME", "TESTS", "UNIT_TESTS")
                         }
                         beforeAgent true
                     }
@@ -542,14 +522,14 @@ pipeline
                         docker {
                             label "${LABEL}"
                             image "qlm-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL}-${PY_VERSION}:latest"
-                            args "-v /var/lib/jenkins/.ssh:/var/lib/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v$LICENSE:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools"
+                            args "$DOCKER_ARGS"
                             alwaysPull false
                             reuseNode true
                         }
                     }
                     steps {
                         script {
-                            support.restore_deps_tarballs("$STAGE_NAME")
+                            support.restore_deps_tarballs("$STAGE_NAME", "linux", "na", "$RUNTIME_DIR")
                             test.tests("$STAGE_NAME", "${env.OS}")
                         }
                     }
@@ -568,7 +548,7 @@ pipeline
                         docker {
                             label "${LABEL}"
                             image "qlm-${QLM_VERSION_FOR_DOCKER_IMAGE}-${OSLABEL}-${PY_VERSION}:latest"
-                            args "-v /var/lib/jenkins/.ssh:/var/lib/jenkins/.ssh -v /etc/qat/license:/etc/qat/license -v$LICENSE:/etc/qlm/license -v /opt/qlmtools:/opt/qlmtools"
+                            args "$DOCKER_ARGS"
                             alwaysPull false
                             reuseNode true
                         }
@@ -633,6 +613,23 @@ pipeline
 GETTER FUNCTIONS
 -----------------------------------------------------------------------------------------------------------
 */
+
+
+/*
+GET_DOCKER_ARGS
+*/
+def get_docker_args(rhel_version)
+{
+    def args = "-v $HOME/.ssh:$HOME/.ssh:ro -v /etc/qlm/license:/etc/qlm/license:ro -v /opt/qlmtools:/opt/qlmtools:ro"
+    if (rhel_version > "8.2") {
+        file = new File("/opt/intel");                  if (file.exists()) args = "$args -v $file:$file:ro"
+        file = new File("/opt/darwin19");               if (file.exists()) args = "$args -v $file:$file:ro"
+        file = new File("/usr/local/cuda-11.2");        if (file.exists()) args = "$args -v $file:$file:ro"
+        file = new File("/etc/alternatives/cuda");      if (file.exists()) args = "$args -v $file:$file:ro"
+        file = new File("/etc/alternatives/cuda-11");   if (file.exists()) args = "$args -v $file:$file:ro"
+    }
+    return args
+}
 
 /*
 GET_REPO_NAME

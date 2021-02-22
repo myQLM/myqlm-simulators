@@ -620,7 +620,7 @@ GET_DOCKER_ARGS
 */
 def get_docker_args(rhel_version)
 {
-    def args = "-v $HOME/.ssh:$HOME/.ssh:ro -v /etc/qlm/license:/etc/qlm/license:ro -v /opt/qlmtools:/opt/qlmtools:ro"
+    def args = "--privileged -v $HOME/.ssh:$HOME/.ssh:ro -v /etc/qlm/license:/etc/qlm/license:ro -v /opt/qlmtools:/opt/qlmtools:ro"
     if (rhel_version > "8.2") {
         file = new File("/opt/intel");                  if (file.exists()) args = "$args -v $file:$file:ro"
         file = new File("/opt/darwin19");               if (file.exists()) args = "$args -v $file:$file:ro"

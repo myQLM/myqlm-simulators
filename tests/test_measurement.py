@@ -99,3 +99,57 @@ def test_teleportation():
             else:
                 assert sample.amplitude == pytest.approx(amplitude_zero) or \
                         sample.amplitude == pytest.approx(-amplitude_zero)
+
+
+def test_multiple_measurements():
+    """
+    Submit a circuit composed to 2 intermediate measurements
+    """
+    # Build a program
+    prog = Program()
+    qbits = prog.qalloc(2)
+    cbits = prog.calloc(2)
+    prog.apply(X, qbits[0])
+    prog.measure(qbits, cbits)
+    prog.apply(CNOT, qbits)
+    prog.measure(qbits, cbits)
+
+    circ = prog.to_circ()
+
+    # Submit circuit
+    result = PyLinalg().submit(circ.to_job())
+
+    # Check result
+    assert len(result) == 1
+    sample = result.raw_data[0]
+    assert sample.state.int == 3
+
+    # Check intermediate measurements
+    assert len(sample.intermediate_measurements) == 2
+    assert sample.intermediate_measurements[0].cbits == [True, False]
+    assert sample.intermediate_measurements[1].cbits == [True, True]
+
+
+def test_reset():
+    """
+    Check the reset gate
+    """
+    # Define a program
+    prog = Program()
+    qbits = prog.qalloc(2)
+    prog.apply(X, qbits[0])
+    prog.reset(qbits)
+    circ = prog.to_circ()
+
+    # Submit circuit
+    result = PyLinalg().submit(circ.to_job())
+
+    # Check result
+    assert len(result) == 1
+    sample = result.raw_data[0]
+    assert sample.state.int == 0
+
+    # Check intermediate measurements
+    assert len(sample.intermediate_measurements) == 1
+    print(sample.intermediate_measurements)
+    assert sample.intermediate_measurements[0].cbits == [True, False]

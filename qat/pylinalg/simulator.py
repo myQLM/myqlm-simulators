@@ -71,7 +71,7 @@ def simulate(circuit):
 
             interm_measurements.append(shared_types.IntermediateMeasurement(
                 gate_pos=op_pos,
-                cbits=[(res_int >> k & 1) for k in range(len(op.qbits))],
+                cbits=[(res_int >> k & 1) for k in range(len(op.qbits) -1, -1, -1)],
                 probability=prob
             ))
             continue
@@ -83,7 +83,7 @@ def simulate(circuit):
                 cbits[cb] = 0
             interm_measurements.append(shared_types.IntermediateMeasurement(
                 gate_pos=op_pos,
-                cbits=res,
+                cbits=[(res >> k & 1) for k in range(len(op.qbits) - 1, -1, -1)],
                 probability=prob
             ))
             continue
@@ -233,7 +233,7 @@ def project(state_vec, qubits, intprob):
     index_assignment = [slice(None) for _ in all_qubits]  # building a nd-array indexing object.
 
     for qb in qubits:
-        val = (state_int >> qubits.index(qb)) & 1
+        val = (state_int >> (len(qubits) - qubits.index(qb) - 1)) & 1
         index_assignment[qb] = 1 - val      # qb = (1 - val) -> set to 0
 
         state_vec[tuple(index_assignment)] = 0.  # Actual projection

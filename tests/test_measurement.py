@@ -66,8 +66,8 @@ def generate_teleportation(split_measures: bool):
         prog.measure([source[0], bell_pair[0]], cbits)
 
     # Classic control
-    prog.cc_apply(cbits[0], Z, bell_pair[1])
     prog.cc_apply(cbits[1], X, bell_pair[1])
+    prog.cc_apply(cbits[0], Z, bell_pair[1])
 
     # Return circuit
     return prog.to_circ()
@@ -78,7 +78,7 @@ def test_teleportation():
     Checks the output of the teleportation
     """
     # Generate two circuits
-    for circ in [generate_teleportation(True), generate_teleportation(False)]:
+    for circ in [generate_teleportation(True), generate_teleportation(False)] * 10:
         # Submit teleportation circuit to PyLinalg
         result = PyLinalg().submit(circ.to_job())
 
@@ -92,13 +92,11 @@ def test_teleportation():
         for sample in result:
             # If last qubit is 1
             if sample.state.int & 1:
-                assert sample.amplitude == pytest.approx(amplitude_one) or \
-                        sample.amplitude == pytest.approx(-amplitude_one)
+                assert sample.amplitude == pytest.approx(amplitude_one)
 
             # If last qubit is 0
             else:
-                assert sample.amplitude == pytest.approx(amplitude_zero) or \
-                        sample.amplitude == pytest.approx(-amplitude_zero)
+                assert sample.amplitude == pytest.approx(amplitude_zero)
 
 
 def test_multiple_measurements():

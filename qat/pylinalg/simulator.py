@@ -67,11 +67,11 @@ def simulate(circuit):
             res_int, prob = intprob_list[0]
 
             for k in range(len(op.qbits)):
-                cbits[op.cbits[k]] = res_int >> k & 1
+                cbits[op.cbits[k]] = res_int >> (len(op.qbits) - k - 1) & 1
 
             interm_measurements.append(shared_types.IntermediateMeasurement(
                 gate_pos=op_pos,
-                cbits=[(res_int >> k & 1) for k in range(len(op.qbits) -1, -1, -1)],
+                cbits=[(res_int >> (len(op.qbits) - k - 1) & 1) for k in range(len(op.qbits))],
                 probability=prob
             ))
             continue
@@ -83,7 +83,7 @@ def simulate(circuit):
                 cbits[cb] = 0
             interm_measurements.append(shared_types.IntermediateMeasurement(
                 gate_pos=op_pos,
-                cbits=[(res >> k & 1) for k in range(len(op.qbits) - 1, -1, -1)],
+                cbits=[(res >> (len(op.qbits) - k - 1) & 1) for k in range(len(op.qbits))],
                 probability=prob
             ))
             continue

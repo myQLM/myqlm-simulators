@@ -66,7 +66,7 @@ setup(
         "Bug Tracker": "https://github.com/myQLM/myqlm-issues/issues",
         "Community": "https://myqlmworkspace.slack.com",
         "Source code": "https://github.com/myQLM/myqlm-simulators"
-    }
+    },
     packages=find_namespace_packages(include=["qat.*"]),
     test_suite="tests",
     install_requires=["qat-core", "qat-lang", "qat-variational", "numpy"],

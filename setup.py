@@ -19,7 +19,7 @@
     under the License.
 """
 
-import os, sys
+import sys
 from setuptools import setup, find_namespace_packages
 from setuptools.command.test import test as TestCommand
 
@@ -39,14 +39,37 @@ class PyTest(TestCommand):
         errno = pytest.main([".", "-v"])
         sys.exit(errno)
 
+
+def get_description():
+    """
+    Returns the long description of the current
+    package
+
+    Returns:
+        str
+    """
+    with open("README.md", "r") as readme:
+        return readme.read()
+
+
 setup(
     name="myqlm-simulators",
-    version="0.0.6",
+    version="0.0.0",
     author="Atos Quantum Lab",
     license="Atos myQLM EULA",
+    description="myQLM-simulators package",
+    long_description=get_description(),
+    long_description_content_type='text/markdown',
+    url="https://atos.net/en/lp/myqlm",
+    project_urls={
+        "Documentation": "https://myqlm.github.io",
+        "Bug Tracker": "https://github.com/myQLM/myqlm-issues/issues",
+        "Community": "https://myqlmworkspace.slack.com",
+        "Source code": "https://github.com/myQLM/myqlm-simulators"
+    }
     packages=find_namespace_packages(include=["qat.*"]),
     test_suite="tests",
     install_requires=["qat-core", "qat-lang", "qat-variational", "numpy"],
     tests_require=['pytest'],
-    cmdclass = {'test': PyTest},
+    cmdclass={'test': PyTest},
 )

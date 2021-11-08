@@ -29,6 +29,21 @@ import qat.core.formula_eval as feval
 
 from qat.core.util import extract_syntax
 
+
+def get_gate_matrix(gate_definition, gate_dic):
+    """
+    Returns the smallest possible submatrix and the number of controls associated to a gate definition.
+
+    Returns:
+        (int, np.array)
+    """
+    nctrls = 0
+    while gate_definition.is_ctrl or gate_definition.nbctrls:
+        nctrls += gate_definition.nbctrls or 1
+        gate_definition = gate_dic[gate_definition.subgate]
+    return nctrls, mat2nparray(gate_definition.matrix)
+
+
 def simulate(circuit):
     """
     Computes state vector at the output of provided circuit.
@@ -132,27 +147,29 @@ def simulate(circuit):
                                        .format(norm))
                 continue
                 
-            else:
-                raise exceptions_types.QPUException(code=exceptions_types.ErrorType.ILLEGAL_GATES,
-                                   modulename="qat.pylinalg",
-                                   file="qat/pylinalg/simulator.py",
-                                   line=103,
-                                   message="Gate {} has no matrix!"\
-                                   .format(gname))
+            
 
 
-        matrix = mat2nparray(gdef.matrix)  # convert matrix to numpy array.
-
-        # reshape for easy application.
-        tensor = matrix.reshape(tuple([2 for _ in range(2*gdef.arity)]))
-
-        # axes for tensor dot: last indices of gate tensor.
-        gate_axes = [k for k in range(gdef.arity, 2*gdef.arity, 1)]
-
-        # actual gate application
-        state_vec = np.tensordot(tensor, state_vec, axes=(gate_axes, op.qbits))
-
-        # moving axes back to correct positions
+        nctrls, matrix = get_gate_matrix(gdef, circuit.gateDic)
+        if matrix is None:
+            raise exceptions_types.QPUException(code=exceptions_types.ErrorType.ILLEGAL_GATES,
+                                modulename="qat.pylinalg",
+                                file="qat/pylinalg/simulator.py",
+                                line=103,
+                                message="Gate {} has no matrix!"\
+                                .format(extract_syntax(gdef, circuit.gateDic)[0]))
+        # Moving qubits axis in first positions
+        state_vec = np.moveaxis(state_vec, op.qbits, range(len(op.qbits)))
+        # Reshaping for block multiplication
+        state_vec = state_vec.reshape((1 << nctrls, matrix.shape[0], 1 << (circuit.nbqbits - len(op.qbits))))
+        # If controled, only applying the gate on the last block
+        if nctrls:
+            state_vec[-1] = np.dot(matrix, state_vec[-1])
+        else:
+            state_vec = np.dot(matrix, state_vec)
+        # Going back to a split shape
+        state_vec = state_vec.reshape(tuple(2 for _ in range(circuit.nbqbits)))
+        # moving qubit back to their position
         state_vec = np.moveaxis(state_vec, range(len(op.qbits)), op.qbits)
 
     return state_vec, interm_measurements

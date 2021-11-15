@@ -137,7 +137,7 @@ def simulate(circuit):
                                        message="Gate {} has wrong shape {}, should be {}!"\
                                        .format(gname, np_matrix.shape, (2**circuit.nbqbits, 1)))
                 state_vec[:] = np_matrix[:, 0].reshape(shape)
-                norm = np.linalg.norm(state_vec) 
+                norm = np.linalg.norm(state_vec)
                 if abs(norm - 1.0) > 1e-10:
                     raise exceptions_types.QPUException(code=exceptions_types.ErrorType.ILLEGAL_GATES,
                                        modulename="qat.pylinalg",
@@ -146,18 +146,19 @@ def simulate(circuit):
                                        message="State preparation should be normalized, got norm = {} instead!"\
                                        .format(norm))
                 continue
-                
-            
 
 
-        nctrls, matrix = get_gate_matrix(gdef, circuit.gateDic)
-        if matrix is None:
+
+
+        try:
+            nctrls, matrix = get_gate_matrix(gdef, circuit.gateDic)
+        except AttributeError as excp:
             raise exceptions_types.QPUException(code=exceptions_types.ErrorType.ILLEGAL_GATES,
                                 modulename="qat.pylinalg",
                                 file="qat/pylinalg/simulator.py",
                                 line=103,
                                 message="Gate {} has no matrix!"\
-                                .format(extract_syntax(gdef, circuit.gateDic)[0]))
+                                .format(extract_syntax(gdef, circuit.gateDic)[0])) from excp
         # Moving qubits axis in first positions
         state_vec = np.moveaxis(state_vec, op.qbits, range(len(op.qbits)))
         # Reshaping for block multiplication
@@ -334,14 +335,14 @@ def compute_observable_average(state_vec, observable):
         state_vec (:class:`numpy.ndarray`) : The state vector, as returned
         by the "simulate" function. i.e of shape (2,...,2) with 1 index per
         qubits.
-        
+
         observable (:class:`qat.core.Observable`): The observable, described
         as a coefficiented sum of Pauli products.
 
-    Returns:        
+    Returns:
         float : The exact value of the observable average, like one would
         get by performing an infinite number of measurements of the observable
-        on the state vector. 
+        on the state vector.
     """
 
     if observable.constant_coeff:
@@ -356,17 +357,17 @@ def compute_observable_average(state_vec, observable):
 
         for k, qb in enumerate(term.qbits):
         # performing tensor products with Pauli matrices of the term.
-            pauli_matrix = pauli_dict[term.op[k]] 
+            pauli_matrix = pauli_dict[term.op[k]]
 
             # tensor products: exactly like gate applications in simulate func.
             local_sv = np.tensordot(pauli_matrix, local_sv, axes=([1],[qb]))
             local_sv = np.moveaxis(local_sv, [0], [qb])
-   
-        # adding to final value, with coeff. 
+
+        # adding to final value, with coeff.
         final_value += term.coeff * np.tensordot(state_vec.conj(), local_sv,
                                                  axes=nbqbits)
 
-    return final_value    
+    return final_value
 
 def mat2nparray(matrix):
     """Converts serialized matrix format into numpy array.

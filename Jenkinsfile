@@ -10,4 +10,4 @@
 *              @Library('ci') _
 */
 
-Jenkinsfile()
+jenkinsfile('myqlm-simulators')

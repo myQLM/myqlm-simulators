@@ -180,6 +180,15 @@ class PyLinalg(QPUHandler):
 
 
         if job.type == ProcessingType.OBSERVABLE:
+            if job.nbshots > 0:
+                raise QPUException(ErrorType.INVALID_ARGS,
+                                   "qat.pylinalg",
+                                   "In OBSERVABLE mode, cannot use nbshots > 0 (here nbshots = %s). Use ObservableSplitter plugin."% job.nbshots)
+
+            if job.observable._ising is not None:
+                raise QPUException(ErrorType.INVALID_ARGS,
+                                   "qat.pylinalg",
+                                   "Observable is specified as an Ising model. This is not supported by PyLinalg.")
 
             result.value = compute_observable_average(np_state_vec, 
                                                       job.observable)

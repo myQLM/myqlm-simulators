@@ -40,7 +40,7 @@ class SimulatedAnnealing(QPUHandler):
     Args:
         temp_t (:class:`~qat.core.variables.ArithExpression`): temperature-time dependence. It needs to be specified using
             a variable :code:`t` instantiated with the class :class:`~qat.core.Variable`.
-        n_steps (int, optional): number of annealing time steps in Temp(t) evolution.
+        n_steps (int): number of annealing time steps in Temp(t) evolution.
         seed (int, optional): Randomness seed.
     """
 
@@ -216,6 +216,10 @@ def extract_j_and_h_from_obs(obs):
         - **offset_i** (*double*) - the value of the Ising offset energy in the respective
           Hamiltonian
     """
+    # The matrices of the observable defined in Ising representation should be retrieved directly from _ising
+    if obs._ising is not None:
+        return obs._ising.get_j_h_and_offset()
+
     nqbits = obs.nbqbits
     h_mag = np.zeros(nqbits)
     J_coupling = np.zeros((nqbits, nqbits))

@@ -28,6 +28,7 @@ import numpy as np
 from qat.lang.AQASM import Program, X, Z, PH, H
 
 from qat.core import Observable, Term
+from qat.comm.exceptions.ttypes import QPUException
 
 ###################################
 # Setting up QPU's test classes
@@ -242,6 +243,22 @@ class TestSimpleObservables(unittest.TestCase):
         job = circ.to_job("OBS", observable=obs)
         result = qpu.submit(job)
         self.assertAlmostEqual(result.value, -1)
+
+
+class TestRaiseExceptNbshotsFinite(unittest.TestCase):
+    def test_basic(self):
+        with self.assertRaises(QPUException):
+            prog = Program()
+            qbits = prog.qalloc(1)
+            prog.apply(X, qbits)
+            circ = prog.to_circ()
+
+            obs = Observable(1, pauli_terms=[Term(1., "Z", [0])])
+            job = circ.to_job("OBS", observable=obs, nbshots=10)
+
+            qpu = PyLinalg()
+
+            result = qpu.submit(job)
 
 if __name__ == '__main__':
     unittest.main(argv=['first-arg-is-ignored'], exit=False)

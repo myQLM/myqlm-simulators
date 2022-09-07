@@ -83,7 +83,8 @@ class TestSimulatedAnnealing(unittest.TestCase):
     n_steps_valid = 5000
 
     # Create an actual problem
-    problem = MaxCut(nx.full_rary_tree(5, 77))
+    graph = nx.full_rary_tree(4, 35)
+    problem = MaxCut(graph)
 
     # Prepare a Job for this problem
     job_valid = problem.to_job()
@@ -200,6 +201,40 @@ class TestSimulatedAnnealing(unittest.TestCase):
         assert np.array_equal(TestSimulatedAnnealing.J_valid, J_extracted)
         assert np.array_equal(TestSimulatedAnnealing.h_valid, h_extracted)
         assert TestSimulatedAnnealing.offset_valid == offset_extracted
+
+    def test_MaxCut(self):
+        """
+        A test checking that a tree-graph given to MaxCut is properly cut.
+        It uses the code from the myQLM notebook on this problem.
+        """
+
+        # Extract parameters for SA
+        problem_parameters_dict = TestSimulatedAnnealing.problem.get_best_parameters()
+        n_steps = problem_parameters_dict["n_steps"]
+        temp_max = problem_parameters_dict["temp_max"]
+        temp_min = problem_parameters_dict["temp_min"]
+
+        # Create a temperature schedule and a QPU
+        tmax = 1.0
+        t = Variable("t", float)
+        temp_t = temp_min * (t / tmax) + temp_max * (1 - t / tmax)
+        sa_qpu = SimulatedAnnealing(temp_t=temp_t, n_steps=n_steps)
+
+        # Create a job and execute it on the QPU
+        problem_job = TestSimulatedAnnealing.problem.to_job(tmax=tmax)
+        n_executions = 10
+        n_edges_aver = 0
+        for _ in range (n_executions):
+            problem_result = sa_qpu.submit(problem_job)
+            solution_configuration = integer_to_spins(problem_result.raw_data[0].state.int,  # the state
+                                                      len(TestSimulatedAnnealing.graph.nodes()))
+
+            # Check how many edges connect subgraphs
+            for (u, v) in TestSimulatedAnnealing.graph.edges():
+                if solution_configuration[u] * solution_configuration[v] == (-1):
+                    n_edges_aver += 1 / n_executions
+
+        assert n_edges_aver / len(TestSimulatedAnnealing.graph.edges()) > 0.97
 
 
 if __name__ == '__main__':

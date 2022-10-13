@@ -28,8 +28,8 @@ import networkx as nx
 from qat.opt import MaxCut
 from qat.qpus import SimulatedAnnealing
 from qat.core import Job, Observable, Schedule, Result, Variable, Term
-from qat.simulated_annealing.service import spins_to_integer, integer_to_spins, \
-    extract_j_and_h_from_obs
+from qat.core.spins import integer_to_spins
+from qat.simulated_annealing.service import extract_j_and_h_from_obs
 import qat.comm.exceptions.ttypes as exceptions_types
 
 def get_observable(J, h, offset):
@@ -168,21 +168,6 @@ class TestSimulatedAnnealing(unittest.TestCase):
         # Solve the problem and check that the returned result is Result
         result = qpu_valid.submit_job(TestSimulatedAnnealing.job_valid)
         assert isinstance(result, Result)
-
-    def test_spins_to_integer_and_back_translations(self):
-        """
-        Tests if the respective two methods in service.py translate
-        backwards and forwards properly
-        """
-
-        random_spin_config = np.random.randint(2, size=10) * 2 - 1
-        random_spin_config_size = len(random_spin_config)
-        random_spin_config_to_int = spins_to_integer(random_spin_config)
-        translated_spin_config = integer_to_spins(random_spin_config_to_int, random_spin_config_size)
-        translated_int = spins_to_integer(translated_spin_config)
-
-        assert np.array_equal(random_spin_config, translated_spin_config)
-        assert random_spin_config_to_int == translated_int
 
     def test_extract_j_and_h_from_obs(self):
         """

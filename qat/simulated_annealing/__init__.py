@@ -19,4 +19,8 @@
     under the License.
 """
 
-from .service import SimulatedAnnealing, integer_to_spins
+from qat.core.spins import integer_to_spins
+from .service import SimulatedAnnealing
+
+
+__all__ = ["SimulatedAnnealing", "integer_to_spins"]

@@ -21,14 +21,13 @@
 
 import inspect
 import numpy as np
-import warnings
 
 from qat.comm.shared.ttypes import ProcessingType
 from qat.comm.exceptions.ttypes import ErrorType, QPUException
 from qat.core.qpu import QPUHandler
+from qat.core.spins import spins_to_integer
 from qat.core.variables import ArithExpression
 from qat.core.wrappers.result import Sample, Result, aggregate_data
-from qat.opt import sqa_best_parameters as param_file
 from qat.lang.AQASM.bits import QRegister
 
 
@@ -239,50 +238,4 @@ def extract_j_and_h_from_obs(obs):
                                        "accepting terms of type 'Z' or 'ZZ', "
                                        "got %s instead" % term)
 
-    return 1.0 * (J_coupling + J_coupling.T), h_mag, -obs.constant_coeff  
-
-
-def spins_to_integer(solution_configuration):
-    """
-    A function to translate from a spin configuration with 1 and -1 to
-    a binary configuration with 0 and 1, to the corresponding decimal
-    integer.
-    
-    Args:
-        spins_array (1D numpy array): array of spins
-        
-    Returns:
-        int: the corresponding integer representing the state
-    """
-    integer = 0
-    for spin_position in range(len(solution_configuration)):
-        spin = solution_configuration[spin_position]
-
-        # mapping -1 to 1 and 1 to 0
-        if spin == -1:
-            integer += 2**(len(solution_configuration) - spin_position - 1)
-    return integer
-
-
-def integer_to_spins(integer, n_spins):
-    """
-    A function which translates an integer in decimal to its binary
-    representation and then from the 0s and 1s in binary to a spin
-    configuration with 1 and -1.
-    
-    Args:
-        integer (int): a decimal integer number for the state
-        
-    Returns:
-        1D numpy array: array of spins
-    """
-    spin_configuration = np.zeros(n_spins)
-    binary_string = '{0:{fill}{width}b}'.format(integer, fill='0', width=n_spins)
-
-    for binary_position in range(len(binary_string)):
-        binary = int(binary_string[binary_position])
-
-        # mapping 1 to -1 and 0 to 1
-        spin_configuration[binary_position] = -1 if binary == 1 else 1
-
-    return spin_configuration
+    return 1.0 * (J_coupling + J_coupling.T), h_mag, -obs.constant_coeff

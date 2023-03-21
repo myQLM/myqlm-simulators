@@ -10,4 +10,5 @@
 *              @Library('ci') _
 */
 
+/* groovylint-disable-next-line CompileStatic */
 jenkinsfile('myqlm-simulators')

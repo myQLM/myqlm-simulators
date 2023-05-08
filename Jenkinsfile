@@ -11,6 +11,7 @@
 */
 
 /* groovylint-disable-next-line CompileStatic */
+library "ci@${BRANCH_NAME}"
 library "qat@${BRANCH_NAME}"
 library "qlmtools@${BRANCH_NAME}"
 jenkinsfile('myqlm-simulators')

@@ -19,6 +19,8 @@
     under the License.
 """
 
-from qat.pylinalg import PyLinalg
-from qat.simulated_annealing import SimulatedAnnealing
-
+# Declare QPUs available in this package
+__qlm_importables__ = {
+    "PyLinalg": "qat.pylinalg:PyLinalg",
+    "SimulatedAnnealing": "qat.simulated_annealing:SimulatedAnnealing"
+}

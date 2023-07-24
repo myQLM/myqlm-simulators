@@ -36,7 +36,7 @@ class PyLinalg(QPUHandler):
     """
     Simple linalg simulator plugin.
 
-    Inherits :func:`serve` and :func:`submit` method from :class:`qat.core.qpu.QPUHandler`
+    Inherits :func:`serve` and :func:`submit` method from :class:`qat.qpus.QPUHandler`
     Only the :func:`submit_job` method is simulator-specific and defined here.
 
     """

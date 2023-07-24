@@ -34,7 +34,7 @@ from qat.lang.AQASM.bits import QRegister
 class SimulatedAnnealing(QPUHandler):
     """
     A Simulated Annealing solver interfaced as a Quantum Processing Unit (QPU).
-    which implements the :func:`submit_job` method of :class:`qat.qpus.QPUHandler`
+    which implements the :func:`submit` method of :class:`qat.qpus.QPUHandler`
 
     Args:
         temp_t (:class:`~qat.core.variables.ArithExpression`): temperature-time dependence. It needs to be specified using

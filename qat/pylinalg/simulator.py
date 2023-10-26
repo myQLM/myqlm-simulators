@@ -57,8 +57,7 @@ def simulate(circuit):
             circuit to simulate.
 
     Returns:
-        tuple: a tuple composed of a state vector and
-        intermediate measurements:
+        tuple: a tuple composed of a state vector and intermediate measurements:
             - state vector: :code:`numpy.ndarray` containing the final
               state vector. It has one 2-valued index per qubits.
             - intermediate measurements: :code:`list` of :class:`qat.comm.shared.ttypes.IntermediateMeasurement`. List containing descriptors of the intermediate measurements that occurred within the circuit, so that the classical branching is known to the user.
@@ -280,8 +279,7 @@ def reset(state_vec, qubits):
         qubits (list): list of integers, containing the qubits to reset.
 
     Returns:
-        (state_vec, int, prob): a tuple composed
-        of:
+        (state_vec, int, prob): a tuple composed of:
             - state_vec(`numpy.ndarray`) the full state vector. the specified qubits
               have been reset.
             - an integer: result of the measurement on the subset of qubits (when

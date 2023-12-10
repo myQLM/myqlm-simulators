@@ -190,7 +190,7 @@ class SimulatedAnnealing(QPUHandler):
 
 
 def extract_j_and_h_from_obs(obs):
-    """
+    r"""
     A function to extract the :math:`J` coupling matrix, magnetic field
     :math:`h` and Ising energy offset :math:`E_I` from the Hamiltonian of an Ising 
     problem. The Hamiltonian should be of the form

@@ -87,7 +87,7 @@ class TestSimulatedAnnealing(unittest.TestCase):
     problem = MaxCut(graph)
 
     # Prepare a Job for this problem
-    job_valid = problem.to_job()
+    job_valid = problem.to_job(job_type="sqa")
 
     def test_creation(self):
         # Check that no exception is raised

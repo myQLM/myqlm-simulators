@@ -17,21 +17,21 @@ class TestBasic(unittest.TestCase):
 
         res = qpu.submit(prog.to_circ().to_job())
 
-        statevec = np.zeros(2**4, np.complex)
+        statevec = np.zeros(2**4, np.complex128)
         for sample in res:
             statevec[sample.state.int] = sample.amplitude
             
         assert(np.linalg.norm(vec - statevec) < 1e-16)
 
     def test_simple(self):
-        vec = np.zeros(2**4, np.complex)
+        vec = np.zeros(2**4, np.complex128)
         vec[2] = 1.0 - 0.5j
         vec /= np.linalg.norm(vec)
 
         self.check_basic(vec)
 
     def test_raise_wrong_size(self):
-        vec = np.zeros(2**3, np.complex)
+        vec = np.zeros(2**3, np.complex128)
         vec[2] = 1.0 - 0.5j
         vec /= np.linalg.norm(vec)
 
@@ -39,7 +39,7 @@ class TestBasic(unittest.TestCase):
             self.check_basic(vec)
 
     def test_raise_wrong_norm(self):
-        vec = np.zeros(2**4, np.complex)
+        vec = np.zeros(2**4, np.complex128)
         vec[2] = 1.0 - 0.5j
 
         with self.assertRaises(QPUException):

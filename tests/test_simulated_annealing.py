@@ -45,10 +45,10 @@ def get_observable(J, h, offset):
     observable = Observable(n_spins, constant_coeff=-offset)
     for i in range(n_spins):
         if not np.isclose(h[i], 0):
-            observable.terms.append(Term(-h[i], "Z", [i]))
+            observable.add_term(Term(-h[i], "Z", [i]))
         for j in range(i + 1, n_spins):
             if not np.isclose(J[i, j], 0):
-                observable.terms.append(Term(-J[i, j], "ZZ", [i, j]))
+                observable.add_term(Term(-J[i, j], "ZZ", [i, j]))
     return observable
 
 

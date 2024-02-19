@@ -60,8 +60,10 @@ class PyLinalg(QPUHandler):
 
         has_int_meas = has_intermediate_measurements(job.circuit)
 
-        if (job.nbshots == 0) or (not has_int_meas):
+        if job.nbshots == 0 and has_int_meas:
+            raise QPUException("The option 'nbshots = 0' is incompatible with a circuit containing intermediate measurements")
 
+        if (job.nbshots == 0) or (not has_int_meas):
             np_state_vec, interm_measurements = simulate(job.circuit)  # perform simu
 
         if job.qubits is not None:

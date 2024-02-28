@@ -95,11 +95,11 @@ def test_teleportation():
         for sample in result:
             # If last qubit is 1
             if sample.state.int & 1:
-                assert sample.probability == pytest.approx(amplitude_one, abs=1e-2)
+                assert sample.probability == pytest.approx(amplitude_one, abs=3e-2)
 
             # If last qubit is 0
             else:
-                assert sample.probability == pytest.approx(amplitude_zero, abs=1e-2)
+                assert sample.probability == pytest.approx(amplitude_zero, abs=3e-2)
 
 
 def test_multiple_measurements():

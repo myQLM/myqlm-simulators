@@ -139,6 +139,7 @@ class PyLinalg(QPUHandler):
                 else:
                     # no need to redo the simulation entirely. Just sampling.
 
+                    np_state_vec, _ = simulate(job.circuit)  # perform simu
                     intprob_list = measure(np_state_vec,
                                            meas_qubits,
                                            nb_samples=job.nbshots)

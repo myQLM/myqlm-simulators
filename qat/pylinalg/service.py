@@ -67,28 +67,25 @@ class PyLinalg(QPUHandler):
                 "The option 'nbshots = 0' is incompatible with a circuit containing intermediate measurements"
             )
 
-        if (job.nbshots == 0) or (not has_int_meas):
-            np_state_vec, interm_measurements = simulate(job.circuit)  # perform simu
-
         if job.qubits is not None:
             meas_qubits = job.qubits
         else:
             meas_qubits = list(range(job.circuit.nbqbits))
 
-        all_qubits = (len(meas_qubits) == job.circuit.nbqbits)
+        all_qubits = len(meas_qubits) == job.circuit.nbqbits
 
         if not job.amp_threshold:
             job.amp_threshold = 0.0
 
         result = Result()
-        result.meta_data = dict()
+        result.meta_data = {}
         result.raw_data = []
         if job.type == ProcessingType.SAMPLE:  # Sampling
             if job.nbshots == 0:  # Returning the full state/distribution
 
+                np_state_vec, _ = simulate(job.circuit)  # perform simu
                 if not all_qubits:
-                    sum_axes = tuple(
-                    [qb for qb in range(job.circuit.nbqbits) if qb not in meas_qubits])
+                    sum_axes = tuple(qb for qb in range(job.circuit.nbqbits) if qb not in meas_qubits)
 
                     # state_vec is transformed into vector of probabilities
                     np_state_vec = np.abs(np_state_vec**2)
@@ -97,13 +94,12 @@ class PyLinalg(QPUHandler):
                 # At this point axes might not be in the same order
                 # as in meas_qubits: restoring this order now:
 
-                svec_inds = sorted(meas_qubits) # current np_state_vec
-                                                # indices
+                svec_inds = sorted(meas_qubits)  # current np_state_vec indices
 
                 for target, qb in enumerate(meas_qubits):
                     cur = svec_inds.index(qb)
                     np_state_vec = np_state_vec.swapaxes(target, cur)
-                    svec_inds[target], svec_inds[cur] =  svec_inds[cur], svec_inds[target]
+                    svec_inds[target], svec_inds[cur] = svec_inds[cur], svec_inds[target]
 
                 # loop over states. val is amp if all_qubits else prob
                 for int_state, val in enumerate(np_state_vec.ravel()):
@@ -119,8 +115,7 @@ class PyLinalg(QPUHandler):
 
                     sample = Sample(state=int_state,
                                     amplitude=amplitude,
-                                    probability=prob,
-                                    intermediate_measurements=interm_measurements)
+                                    probability=prob)
 
                     # append
                     result.raw_data.append(sample)
@@ -128,24 +123,21 @@ class PyLinalg(QPUHandler):
             elif job.nbshots > 0:  # Performing shots
 
                 if has_int_meas:
-                # if intermediate measurements, the entire simulation must
-                # be redone for every shot. Because the intermediate measurements
-                # might change the output distribution probability.
+                    # if intermediate measurements, the entire simulation must
+                    # be redone for every shot. Because the intermediate measurements
+                    # might change the output distribution probability.
 
                     intprob_list = []
                     interm_meas_list = []
                     for _ in range(job.nbshots):
-                        np_state_vec, interm_measurements = simulate(job.circuit)
-                                                            # perform simu
-                        intprob = measure(np_state_vec,
-                                           meas_qubits,
-                                           nb_samples=1)
+                        np_state_vec, interm_measurements = simulate(job.circuit)  # perform simu
+                        intprob = measure(np_state_vec, meas_qubits, nb_samples=1)
 
                         intprob_list.append(intprob[0])
                         interm_meas_list.append(interm_measurements)
 
                 else:
-                # no need to redo the simulation entirely. Just sampling.
+                    # no need to redo the simulation entirely. Just sampling.
 
                     intprob_list = measure(np_state_vec,
                                            meas_qubits,
@@ -169,8 +161,7 @@ class PyLinalg(QPUHandler):
                         amplitude = ComplexNumber(re=amp.real, im=amp.imag)
 
                     # final result object
-                    sample = Sample(state=res_int,
-                            intermediate_measurements=interm_meas_list[k])
+                    sample = Sample(state=res_int, intermediate_measurements=interm_meas_list[k])
                     # append
                     result.raw_data.append(sample)
 
@@ -180,30 +171,33 @@ class PyLinalg(QPUHandler):
             else:
                 raise QPUException(ErrorType.INVALID_ARGS,
                                    "qat.pylinalg",
-                                   "Invalid number of shots %s"% job.nbshots)
+                                   f"Invalid number of shots {job.nbshots}")
 
             return result
 
-
         if job.type == ProcessingType.OBSERVABLE:
             if job.nbshots > 0:
-                raise QPUException(ErrorType.INVALID_ARGS,
-                                   "qat.pylinalg",
-                                   "In OBSERVABLE mode, cannot use nbshots > 0 (here nbshots = %s). Use ObservableSplitter plugin."% job.nbshots)
+                raise QPUException(
+                    ErrorType.INVALID_ARGS,
+                    "qat.pylinalg",
+                    f"In OBSERVABLE mode, cannot use nbshots > 0 (here nbshots = {job.nbshots}). Use ObservableSplitter plugin."
+                )
 
             if job.observable._ising is not None:
                 raise QPUException(ErrorType.INVALID_ARGS,
                                    "qat.pylinalg",
                                    "Observable is specified as an Ising model. This is not supported by PyLinalg.")
 
-            result.value = compute_observable_average(np_state_vec, 
+            np_state_vec, _ = simulate(job.circuit)  # perform simu
+            result.value = compute_observable_average(np_state_vec,
                                                       job.observable)
 
             return result
 
         raise QPUException(ErrorType.INVALID_ARGS,
                            "qat.pylinalg",
-                           "Unsupported job type %s"%job.type)
+                           f"Unsupported job type {job.type}")
+
 
 def has_intermediate_measurements(circuit):
     """

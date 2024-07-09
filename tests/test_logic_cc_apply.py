@@ -18,16 +18,14 @@
     KIND, either express or implied.  See the License for the
     specific language governing permissions and limitations
     under the License.
-"""
 
-"""
 Tests for logic gates and classically controlled gates
 """
 
 import unittest
-from qat.core.task import Task
 from qat.lang.AQASM import Program, X
 from qat.pylinalg import get_qpu_server as get_pylinalg_qpu
+
 
 def make_simple_logic():
     prog = Program()
@@ -41,6 +39,7 @@ def make_simple_logic():
     prog.logic(cbits[4], cbits[0] ^ cbits[1])
     return prog.to_circ()
 
+
 def make_c_control_circuit():
     prog = Program()
     qbits = prog.qalloc(2)
@@ -51,23 +50,26 @@ def make_c_control_circuit():
     prog.measure(qbits[1], cbits[1])
     return prog.to_circ()
 
+
 class TestClassicalControl(unittest.TestCase):
     def test_cc(self):
         circ = make_c_control_circuit()
-        task = Task(circ, get_pylinalg_qpu())
+        res = get_pylinalg_qpu().submit(circ.to_job(nbshots=10))
 
-        for res in task.states():
-            self.assertEqual(res.intermediate_measurements[0].cbits[0], 1)
-            self.assertEqual(res.intermediate_measurements[1].cbits[0], 1)
+        for sample in res:
+            self.assertEqual(sample.intermediate_measurements[0].cbits[0], 1)
+            self.assertEqual(sample.intermediate_measurements[1].cbits[0], 1)
+
 
 class TestLogicGates(unittest.TestCase):
     def test_logic(self):
         circ = make_simple_logic()
-        task = Task(circ, get_pylinalg_qpu())
+        res = get_pylinalg_qpu().submit(circ.to_job(nbshots=10))
 
-        for res in task.states():
-            self.assertEqual(int(res.intermediate_measurements[0].cbits[0]), 1)
-            self.assertEqual(int(res.intermediate_measurements[1].cbits[0]), 0)
+        for sample in res:
+            self.assertEqual(int(sample.intermediate_measurements[0].cbits[0]), 1)
+            self.assertEqual(int(sample.intermediate_measurements[1].cbits[0]), 0)
+
 
 if __name__ == '__main__':
     unittest.main(argv=['first-arg-is-ignored'], exit=False)

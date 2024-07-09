@@ -25,8 +25,10 @@ Description: Unit test for the PyLinalg simulator
 """
 
 import pytest
+import math
 from qat.lang.AQASM import Program, RX, RZ, CNOT, H, Z, X
 from qat.qpus import PyLinalg
+from qat.core.wrappers.result import aggregate_data
 
 
 def generate_teleportation(split_measures: bool):
@@ -78,13 +80,14 @@ def test_teleportation():
     Checks the output of the teleportation
     """
     # Generate two circuits
-    for circ in [generate_teleportation(True), generate_teleportation(False)] * 10:
+    for circ in [generate_teleportation(True), generate_teleportation(False)]:
         # Submit teleportation circuit to PyLinalg
-        result = PyLinalg().submit(circ.to_job())
+        result = PyLinalg().submit(circ.to_job(qubits=[2], nbshots=10000, aggregate_data=False))
+        result = aggregate_data(result, keep_intermeas=False)
 
         # Init expected result
-        amplitude_zero = -0.5319070945531361-0.6198336118074692j
-        amplitude_one = 0.4378426919829602+0.3757325026063933j
+        amplitude_zero = abs(-0.5319070945531361 - 0.6198336118074692j) ** 2
+        amplitude_one = abs(0.4378426919829602 + 0.3757325026063933j) ** 2
 
         # Check result
         assert len(result) == 2
@@ -92,11 +95,11 @@ def test_teleportation():
         for sample in result:
             # If last qubit is 1
             if sample.state.int & 1:
-                assert sample.amplitude == pytest.approx(amplitude_one)
+                assert sample.probability == pytest.approx(amplitude_one, abs=3e-2)
 
             # If last qubit is 0
             else:
-                assert sample.amplitude == pytest.approx(amplitude_zero)
+                assert sample.probability == pytest.approx(amplitude_zero, abs=3e-2)
 
 
 def test_multiple_measurements():
@@ -115,7 +118,7 @@ def test_multiple_measurements():
     circ = prog.to_circ()
 
     # Submit circuit
-    result = PyLinalg().submit(circ.to_job())
+    result = PyLinalg().submit(circ.to_job(nbshots=10))
 
     # Check result
     assert len(result) == 1
@@ -140,7 +143,7 @@ def test_reset():
     circ = prog.to_circ()
 
     # Submit circuit
-    result = PyLinalg().submit(circ.to_job())
+    result = PyLinalg().submit(circ.to_job(nbshots=10))
 
     # Check result
     assert len(result) == 1

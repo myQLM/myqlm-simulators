@@ -87,7 +87,7 @@ class TestSimulatedAnnealing(unittest.TestCase):
     problem = MaxCut(graph)
 
     # Prepare a Job for this problem
-    job_valid = problem.to_job()
+    job_valid = problem.to_job(job_type="sqa")
 
     def test_creation(self):
         # Check that no exception is raised
@@ -206,10 +206,10 @@ class TestSimulatedAnnealing(unittest.TestCase):
         sa_qpu = SimulatedAnnealing(temp_t=temp_t, n_steps=n_steps)
 
         # Create a job and execute it on the QPU
-        problem_job = TestSimulatedAnnealing.problem.to_job(tmax=tmax)
+        problem_job = TestSimulatedAnnealing.problem.to_job(job_type="sqa", tmax=tmax)
         n_executions = 10
         n_edges_aver = 0
-        for _ in range (n_executions):
+        for _ in range(n_executions):
             problem_result = sa_qpu.submit(problem_job)
             solution_configuration = integer_to_spins(problem_result.raw_data[0].state.int,  # the state
                                                       len(TestSimulatedAnnealing.graph.nodes()))

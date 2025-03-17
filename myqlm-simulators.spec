@@ -86,22 +86,6 @@ qat-fermion simulator. This package replaces the qat-dqs package.
 #
 # -------------------------------------------------------------------
 %build
-%if 0%{run_by_jenkins} == 0
-QATDIR=%{_builddir}/qat
-QAT_REPO_BASEDIR=%{_builddir}
-RUNTIME_DIR=%{_builddir}/runtime
-
-source /usr/local/bin/qatenv
-# Restore artifacts
-ARTIFACTS_DIR=$QAT_REPO_BASEDIR/artifacts
-mkdir -p $RUNTIME_DIR
-dependent_repos="$(get_dependencies.sh build %{project_name})"
-while read -r dependent_repo; do
-    [[ -n $dependent_repo ]] || continue
-    tar xfz $ARTIFACTS_DIR/${dependent_repo}-*.tar.gz -C $RUNTIME_DIR
-done <<< "$dependent_repos"
-bldit -t debug -nd -ni -v ${name}
-%endif
 
 
 # -------------------------------------------------------------------
@@ -110,26 +94,9 @@ bldit -t debug -nd -ni -v ${name}
 #
 # -------------------------------------------------------------------
 %install
-QATDIR=%{_builddir}/qat
-QAT_REPO_BASEDIR=%{_builddir}
-INSTALL_DIR=%{buildroot}
-
-# Install it
-%if 0%{run_by_jenkins} == 0
-source /usr/local/bin/qatenv
-bldit -t debug -nd -nc -nm ${name}
-
-# Save artifact
-ARTIFACTS_DIR=$QAT_REPO_BASEDIR/artifacts
-mkdir -p $ARTIFACTS_DIR
-tar cfz $ARTIFACTS_DIR/%{project_name}-%{version}-%{platform}-%{python_rpm}-%{python_distrib}.tar.gz -C $INSTALL_DIR .
-%else
-# Restore installed files
-mkdir -p $INSTALL_DIR
-tar xfz %{workspace}/artifacts/tarballs-prod/%{name}-%{version}-%{rpm_release}-%{python_distrib}.%{dist}.%{ExclusiveArch}.tar.gz -C $INSTALL_DIR
-%endif
-
-rm -rf $INSTALL_DIR/usr/local/lib64/python%{python_version}/qaptiva-packages/qat/__init__.py
+mkdir -p $RPM_BUILD_ROOT
+dist_no_dot=$(echo "%{dist}" | sed 's/^\.//')
+tar xfz %{workspace}/artifacts/tarballs-prod/%{name}-%{version}-%{rpm_release}-${dist_no_dot}-%{_target_cpu}.tar.gz -C $RPM_BUILD_ROOT
 
 
 # -------------------------------------------------------------------

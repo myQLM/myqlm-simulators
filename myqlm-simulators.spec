@@ -126,7 +126,7 @@ tar cfz $ARTIFACTS_DIR/%{project_name}-%{version}-%{platform}-%{python_rpm}-%{py
 %else
 # Restore installed files
 mkdir -p $INSTALL_DIR
-tar xfz %{workspace}/%{project_name}-%{version}-%{platform}-%{python_rpm}-%{python_distrib}.tar.gz -C $INSTALL_DIR
+tar xfz %{workspace}/artifacts/tarballs-prod/%{name}-%{version}-%{rpm_release}-%{python_distrib}.%{dist}.%{ExclusiveArch}.tar.gz -C $INSTALL_DIR
 %endif
 
 rm -rf $INSTALL_DIR/usr/local/lib64/python%{python_version}/qaptiva-packages/qat/__init__.py

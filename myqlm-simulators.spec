@@ -110,6 +110,7 @@ tar xfz %{workspace}/artifacts/tarballs-prod/%{name}-%{version}-%{rpm_release}-$
 %{target_python_dir}/qat/pylinalg/*
 %{target_python_dir}/qat/qpus/hook_pylinalg.py
 %{target_python_dir}/qat/simulated_annealing/*
+%{target_python_dir}/qat/__init__.py
 
 
 # -------------------------------------------------------------------

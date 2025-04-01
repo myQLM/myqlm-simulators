@@ -46,7 +46,7 @@
 # GLOBAL PACKAGE & SUB-PACKAGES DEFINITION
 #
 # -------------------------------------------------------------------
-Name:           %{project_prefix}%{python_major}%{python_minor}-%{project_suffix}
+Name:           %{project_name}
 Version:        %{version}
 Release:        %{rpm_release}%{?dist}
 Group:          Development/Libraries

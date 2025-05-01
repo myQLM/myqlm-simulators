@@ -134,5 +134,5 @@ tar xfz %{workspace}/artifacts/tarballs-prod/%{name}-%{version}-%{rpm_release}.$
 #
 # -------------------------------------------------------------------
 %changelog
-* Mon May 01 2025 Jerome Pioux <jerome.pioux@eviden.com>
+* Mon Jul 22 2024 Jerome Pioux <jerome.pioux@eviden.com>
   Initial RPM for Distributed Qaptiva.

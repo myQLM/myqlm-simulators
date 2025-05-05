@@ -30,6 +30,7 @@
 
 # Read location environment variables
 %define target_bin_dir      /%{getenv:BIN_INSTALL_DIR}
+%define target_sbin_dir     /%{getenv:SBIN_INSTALL_DIR}
 %define target_lib_dir      /%{getenv:LIB_INSTALL_DIR}
 %define target_headers_dir  /%{getenv:HEADERS_INSTALL_DIR}
 %define target_thrift_dir   /%{getenv:THRIFT_INSTALL_DIR}
@@ -65,8 +66,9 @@ Source:         %{project_name}-%{version}.tar.gz
 #
 # -------------------------------------------------------------------
 Summary:  Quantum Application Toolset (QAT)
-Provides: %{name}
+Provides: %{name} = %{version}
 AutoReq: no
+AutoProv: no
 
 %description
 qat-fermion simulator. This package replaces the qat-dqs package.
@@ -77,7 +79,6 @@ qat-fermion simulator. This package replaces the qat-dqs package.
 #
 # -------------------------------------------------------------------
 %prep
-%setup -q -n %{project_name}-%{version}
 
 
 # -------------------------------------------------------------------

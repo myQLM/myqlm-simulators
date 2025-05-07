@@ -6,8 +6,17 @@
 */
 
 // Load shared-libraries
-print("### Entering Jenkinsfile [branch: $BRANCH_NAME]")
-new JenkinsUtils().loadSharedLibraries(this, BRANCH_NAME)
+String branchName = env.BRANCH_NAME
+String tagName = params.UI_TAG
+
+print("### Entering Jenkinsfile [branch: $branchName, tag=$tagName]")
+if (tagName != 'none') {
+    print('### Using tag...')
+    new JenkinsUtils().loadSharedLibraries(this, tagName)
+} else {
+    print('### Using branch...')
+    new JenkinsUtils().loadSharedLibraries(this, branchName)
+}
 
 // Call the global Jenkinsfile
 print('### Calling global Jenkinsfile')

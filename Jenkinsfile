@@ -10,7 +10,7 @@ String branchName = env.BRANCH_NAME
 String tagName = params.UI_TAG
 
 print("### Entering Jenkinsfile [branch: $branchName, tag=$tagName]")
-if (tagName != 'none') {
+if (tagName && tagName != 'none') {
     print('### Using tag...')
     new JenkinsUtils().loadSharedLibraries(this, tagName)
 } else {

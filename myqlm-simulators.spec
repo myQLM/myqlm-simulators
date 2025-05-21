@@ -29,12 +29,12 @@
 %define project_suffix      %(echo %{project_name} | cut -d- -f2-)
 
 # Read location environment variables
-%define target_bin_dir      /%{getenv:BIN_INSTALL_DIR}
-%define target_sbin_dir     /%{getenv:SBIN_INSTALL_DIR}
-%define target_lib_dir      /%{getenv:LIB_INSTALL_DIR}
-%define target_headers_dir  /%{getenv:HEADERS_INSTALL_DIR}
-%define target_thrift_dir   /%{getenv:THRIFT_INSTALL_DIR}
-%define target_python_dir   /%{getenv:PYTHON_INSTALL_DIR}
+%define target_bin_dir      /%{getenv:BIN_INSTALL_DIR_NOPYTHON}
+%define target_sbin_dir     /%{getenv:SBIN_INSTALL_DIR_NOPYTHON}
+%define target_lib_dir      /%{getenv:LIB_INSTALL_DIR_NOPYTHON}
+%define target_headers_dir  /%{getenv:HEADERS_INSTALL_DIR_NOPYTHON}
+%define target_thrift_dir   /%{getenv:THRIFT_INSTALL_DIR_NOPYTHON}
+%define target_python_dir   /%{getenv:PYTHON_INSTALL_DIR_NOPYTHON}
 
 %undefine __brp_mangle_shebangs
 

@@ -69,7 +69,7 @@ setup(
     },
     packages=find_namespace_packages(include=["qat.*"]),
     test_suite="tests",
-    install_requires=["qat-core", "qat-lang", "qat-variational", "numpy~=1.0"],
+    install_requires=["qat-core", "qat-lang", "qat-variational", "numpy~=2.0"],
     tests_require=['pytest'],
     cmdclass={'test': PyTest},
 )

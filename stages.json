@@ -1,0 +1,27 @@
+{
+    "projects": {
+        "myqlm-simulators": {
+            "basis": [
+                "linguist",
+                "build",
+                "test"
+            ],
+            "code_analysis": [
+                "flake8",
+                "pylint"
+            ],
+            "build_and_test_matrix": {
+                "linux-x86_64:cpython:312": [
+                    "build",
+                    "unit_test"
+                ],
+                "macosx-arm:brew:312": [
+                    "unit_test"
+                ],
+                "win-x86_64:cpython:312": [
+                    "unit_test"
+                ]
+            }
+        }
+    }
+}

@@ -1,5 +1,5 @@
 /*
-* Authors:     Atos BDS R&D CI/CD Qaptiva Team
+* Authors:     Bull BDS R&D CI/CD Qaptiva Team
 * Description: This is this repo Jenkinsfile (the Jenkins pipeline recipe).
 *              Its goal is to explicitely load the shared-libraries, then call
 *              the global Jenkinsfile.

@@ -15,7 +15,7 @@
                     "build",
                     "unit_test"
                 ],
-                "macosx-arm:brew:312": [
+                "macosx-arm:cpython:312": [
                     "unit_test"
                 ],
                 "win-x86_64:cpython:312": [

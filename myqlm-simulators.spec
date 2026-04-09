@@ -55,7 +55,7 @@ Distribution:   QLM
 Vendor:         Bull
 License:        Bull S.A.S. proprietary : All rights reserved
 BuildArch:      noarch
-URL:            https://eviden.com/solutions/advanced-computing/quantum-computing
+URL:            https://www.bull.com/en/solutions/quantum-computing
 
 Source:         %{project_name}-%{version}.tar.gz
 

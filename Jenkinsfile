@@ -1,14 +1,17 @@
 /*
 * Authors:     Bull BDS R&D CI/CD Qaptiva Team
+* Copyright:   2017-2026  Bull S.A.S. - All rights reserved.
+*              This is not Free or Open Source software.
+*              Please contact Bull SAS for details about its license.
+*              Bull - Rue Jean Jaurès - B.P. 68 - 78340 Les Clayes-sous-Bois
 * Description: This is this repo Jenkinsfile (the Jenkins pipeline recipe).
-*              Its goal is to explicitely load the shared-libraries, then call
-*              the global Jenkinsfile.
+*              It calls the common jenkinsPipeline file.
 */
 
-// Load shared-libraries
-print("### Entering Jenkinsfile [branch: $BRANCH_NAME]")
-new JenkinsUtils().loadSharedLibraries(this, BRANCH_NAME)
+/* groovylint-disable CompileStatic */
 
-// Call the global Jenkinsfile
-print('### Calling global Jenkinsfile')
-jenkinsfile('myqlm-simulators')
+final String projectName = 'myqlm-simulators'
+
+print("### Entering Jenkinsfile [project: ${projectName}, branch: ${BRANCH_NAME}]")
+jenkinsPipeline(projectName)
+

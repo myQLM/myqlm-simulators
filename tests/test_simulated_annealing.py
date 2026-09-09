@@ -194,7 +194,7 @@ class TestSimulatedAnnealing(unittest.TestCase):
         """
 
         # Extract parameters for SA
-        problem_parameters_dict = TestSimulatedAnnealing.problem.get_best_parameters()
+        problem_parameters_dict = TestSimulatedAnnealing.problem.get_sa_initial_parameters()
         n_steps = problem_parameters_dict["n_steps"]
         temp_max = problem_parameters_dict["temp_max"]
         temp_min = problem_parameters_dict["temp_min"]
